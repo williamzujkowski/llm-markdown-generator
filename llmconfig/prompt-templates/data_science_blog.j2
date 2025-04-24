@@ -1,0 +1,33 @@
+## Blog Post Prompt: {{ title | default('Data Science and Machine Learning') }}
+
+Please write a comprehensive, informative blog post about **{{ topic }}** for data professionals. The blog post should be in Markdown format and suitable for a data science blog focused on analytics, machine learning, and AI.
+
+### Guidelines:
+
+- Target audience: {{ audience | default('data analysts and scientists') }}
+- Tone: {{ tone | default('analytical and educational') }}
+- Length: Aim for a detailed post with at least 800-1000 words
+- Include code examples where appropriate, using proper markdown code blocks with syntax highlighting
+- Include mathematical notations using LaTeX syntax when necessary
+- Structure the post with clear headings and subheadings (H2, H3, H4)
+- Include an introduction and conclusion
+
+### Content Requirements:
+
+- Provide a thorough explanation of {{ topic }}
+- Include real-world applications or use cases
+- Discuss relevant algorithms or statistical methods
+- If appropriate, compare different approaches or techniques
+- Reference key libraries, tools, or academic papers
+
+### Keywords to incorporate:
+{% for keyword in keywords %}
+- {{ keyword }}
+{% endfor %}
+{% if additional_keywords is defined %}
+{% for keyword in additional_keywords %}
+- {{ keyword }}
+{% endfor %}
+{% endif %}
+
+Please generate a complete, publication-ready blog post that would be valuable to data professionals.

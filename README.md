@@ -1,60 +1,118 @@
-# .github Template Repository
+# LLM Markdown Generator
 
-A standardized, comprehensive, and best-practice set of GitHub repository configuration files and workflows to accelerate new project setup.
+A configurable Python framework that leverages Large Language Models (LLMs) to generate markdown blog posts with customizable 11ty-compatible YAML front matter.
 
-## What This Template Provides
+## 🌟 Features
 
-- **GitHub Actions Workflows** for CI/CD, security scanning, and dependency management
-- **Issue Templates** for bug reports and feature requests
-- **Pull Request Template** to ensure quality contributions
-- **Community Health Files** including Code of Conduct, Contributing Guidelines, and Security Policy
-- **Dependabot Configuration** for automated dependency updates
-- **Repository Configuration Files** and recommended settings
+- Generate markdown blog posts using LLMs (supports OpenAI and Google Gemini)
+- Customizable prompt templates using Jinja2
+- 11ty-compatible YAML front matter generation
+- Configuration-driven design for easy customization
+- Command-line interface for easy integration into workflows
 
-## How to Use This Template
+## 🚀 Installation
 
-1. Click the "Use this template" button on the GitHub repository
-2. Name your new repository and create it
-3. Review and customize the included files to fit your specific project needs
-4. Update placeholders in files (especially in SECURITY.md)
-5. Uncomment relevant sections in configuration files where noted
-6. Delete or modify files that do not apply to your project
+```bash
+# Clone the repository
+git clone https://github.com/your-username/llm-markdown-generator.git
+cd llm-markdown-generator
 
-## Included Components
+# Create and activate a virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-### GitHub Actions Workflows
+# Install the package in development mode
+pip install -e ".[dev]"
 
-- `ci.yml`: Basic CI workflow with linting and testing placeholders
-- `codeql-analysis.yml`: Security scanning using GitHub CodeQL
-- `dependency-review.yml`: Reviews dependencies for security issues on PRs
+# Install pre-commit hooks
+pre-commit install
+```
 
-### Issue & PR Templates
+## 📝 Usage
 
-- Bug report template
-- Feature request template
-- PR template with checklist
+### Set Environment Variables
 
-### Community Health Files
+Create a `.env` file in the project root with your API keys:
 
-- `CODE_OF_CONDUCT.md`: Contributor Covenant Code of Conduct
-- `CONTRIBUTING.md`: Guidelines for contributing to the project
-- `SECURITY.md`: Security policy and vulnerability reporting process
+```
+# For OpenAI
+OPENAI_API_KEY=your_openai_api_key_here
 
-### Configuration Files
+# For Google Gemini
+GEMINI_API_KEY=your_gemini_api_key_here
+```
 
-- `dependabot.yml`: Automated dependency updates (initially for GitHub Actions)
+### Generate Content
 
-## Customization Guide
+Use the CLI to generate content for a specific topic:
 
-- Review all files and update project-specific information
-- For workflows, add language/framework-specific build and test commands
-- Update issue templates with project-specific categories/labels
-- Configure Dependabot for your project package ecosystems
+```bash
+# Generate a post about Python decorators (using default provider from config)
+llm-markdown python --title "Understanding Python Decorators"
 
-## License
+# Generate a JavaScript post with custom keywords
+llm-markdown javascript --title "Async/Await Patterns" --keywords "async,await,promises,error handling"
 
-This template is available under the MIT License.
+# Specify a custom output directory
+llm-markdown data_science --title "Introduction to Linear Regression" --output-dir "my-blog/posts"
 
-## Contributing
+# Use Google Gemini instead of OpenAI (overriding the config)
+llm-markdown python --title "Python Decorators Guide" --provider gemini
 
-Contributions to improve this template are welcome! Please see the CONTRIBUTING.md file for guidelines.
+# Provide an API key directly on the command line
+llm-markdown python --title "Python Tips" --provider gemini --api-key "AIzaSyBiyiSjDToD9rAMR1UXPwpBlrHuuT5CTG0"
+```
+
+## ⚙️ Configuration
+
+### Main Configuration
+
+The framework is configured via YAML files in the `config/` directory:
+
+- `config/config.yaml`: Main configuration file
+- `config/front_matter_schema.yaml`: Schema for the front matter
+
+You can switch between different LLM providers by editing the `provider_type` in the config file or by using the `--provider` flag in the CLI.
+
+### Supported LLM Providers
+
+- **OpenAI**: Using GPT models via the OpenAI API
+- **Google Gemini**: Using Gemini models via the Google AI API
+
+### Prompt Templates
+
+Prompt templates are stored in the `.llmconfig/prompt-templates/` directory as Jinja2 templates. You can create custom templates for different topics or content types.
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+pytest
+
+# Run tests with coverage
+pytest --cov=src
+```
+
+## 🧹 Code Quality
+
+```bash
+# Format code with Black
+black .
+
+# Sort imports with isort
+isort .
+
+# Lint with flake8
+flake8
+
+# Type check with mypy
+mypy .
+```
+
+## 📜 License
+
+[MIT License](LICENSE)
+
+## 🤝 Contributing
+
+Contributions are welcome! Please check out our [Contributing Guide](CONTRIBUTING.md) for more details.

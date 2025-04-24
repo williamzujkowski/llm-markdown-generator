@@ -1,0 +1,67 @@
+# LLM Markdown Generator Configuration
+
+# LLM Provider Configuration
+# Note: You can use either OpenAI or Gemini as the provider
+# Default configuration (OpenAI)
+llm_provider:
+  provider_type: "openai"  # Options: "openai" or "gemini"
+  model_name: "gpt-4"     # OpenAI model to use
+  api_key_env_var: "OPENAI_API_KEY"  # The environment variable containing your API key
+  temperature: 0.7       # Controls randomness in output (0.0-1.0)
+  max_tokens: 1000       # Maximum tokens to generate
+  additional_params:     # Additional parameters to pass to the API
+    top_p: 0.9
+
+# Alternative Gemini configuration:
+# llm_provider:
+#   provider_type: "gemini"
+#   model_name: "gemini-1.0-pro-latest"  # Gemini model to use
+#   api_key_env_var: "GEMINI_API_KEY"    # The environment variable containing your API key
+#   temperature: 0.7
+#   max_tokens: 1000
+#   additional_params:
+#     topK: 40
+#     topP: 0.95
+
+# Front Matter Configuration
+front_matter:
+  schema_path: "config/front_matter_schema.yaml"  # Path to the front matter schema
+
+# Topics Configuration
+topics:
+  python:
+    prompt_template: "python_blog.j2"  # Template file in .llmconfig/prompt-templates/
+    keywords:                          # Default keywords for this topic
+      - python
+      - programming
+      - coding
+      - software development
+    custom_data:                       # Custom data for prompt context
+      audience: "developers"
+      tone: "educational"
+  
+  javascript:
+    prompt_template: "javascript_blog.j2"
+    keywords:
+      - javascript
+      - web development
+      - frontend
+      - coding
+    custom_data:
+      audience: "web developers"
+      tone: "practical"
+  
+  data_science:
+    prompt_template: "data_science_blog.j2"
+    keywords:
+      - data science
+      - machine learning
+      - artificial intelligence
+      - python
+      - analytics
+    custom_data:
+      audience: "data analysts and scientists"
+      tone: "analytical"
+
+# Output Configuration
+output_dir: "output"  # Directory where generated markdown files will be saved

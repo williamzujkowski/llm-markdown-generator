@@ -1,0 +1,44 @@
+# Front Matter Schema for 11ty-compatible Markdown Posts
+
+# Title of the post
+title: "Default Title"  # Will be overridden during generation
+
+# Publication date (ISO format: YYYY-MM-DD)
+# When null, will be set to current date during generation
+date: null
+
+# Post tags (array of strings)
+tags: []
+
+# Post categories
+category: "general"  # Will be overridden with topic name
+
+# Layout to use (from 11ty templates)
+layout: "post"
+
+# Author information
+author: "AI Content Generator"
+
+# SEO description
+description: ""
+
+# Optional image path relative to site root
+featured_image: null
+
+# SEO settings
+seo:
+  og_title: null  # Defaults to title if null
+  og_description: null  # Defaults to description if null
+  og_image: null  # Defaults to featured_image if null
+  twitter_card: "summary_large_image"
+
+# Whether post should appear in site feeds/listings
+draft: false
+
+# Display settings
+show_toc: true  # Show table of contents
+comments: true  # Enable comments section
+
+# Custom metadata fields (example)
+reading_time: null  # Will be calculated during build in 11ty
+last_modified: null  # Will be updated by git or build process

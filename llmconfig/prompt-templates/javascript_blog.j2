@@ -1,0 +1,32 @@
+## Blog Post Prompt: {{ title | default('JavaScript Development') }}
+
+Please write a comprehensive, informative blog post about **{{ topic }}** for web developers. The blog post should be in Markdown format and suitable for a programming blog focused on JavaScript and web development.
+
+### Guidelines:
+
+- Target audience: {{ audience | default('web developers') }}
+- Tone: {{ tone | default('practical and solution-oriented') }}
+- Length: Aim for a detailed post with at least 800-1000 words
+- Include code examples where appropriate, using proper markdown code blocks with syntax highlighting
+- Structure the post with clear headings and subheadings (H2, H3, H4)
+- Include an introduction and conclusion
+
+### Content Requirements:
+
+- Provide a thorough explanation of {{ topic }}
+- Include practical examples and implementation details
+- Discuss browser compatibility considerations if relevant
+- If appropriate, cover performance implications
+- Reference any key libraries, frameworks, or tools
+
+### Keywords to incorporate:
+{% for keyword in keywords %}
+- {{ keyword }}
+{% endfor %}
+{% if additional_keywords is defined %}
+{% for keyword in additional_keywords %}
+- {{ keyword }}
+{% endfor %}
+{% endif %}
+
+Please generate a complete, publication-ready blog post that would be valuable to JavaScript and web developers.

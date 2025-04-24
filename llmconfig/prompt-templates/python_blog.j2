@@ -1,0 +1,32 @@
+## Blog Post Prompt: {{ title | default('Python Programming') }}
+
+Please write a comprehensive, informative blog post about **{{ topic }}** for a technical audience. The blog post should be in Markdown format and suitable for a programming blog focused on Python development.
+
+### Guidelines:
+
+- Target audience: {{ audience | default('experienced developers') }}
+- Tone: {{ tone | default('educational and practical') }}
+- Length: Aim for a detailed post with at least 800-1000 words
+- Include code examples where appropriate, using proper markdown code blocks with syntax highlighting
+- Structure the post with clear headings and subheadings (H2, H3, H4)
+- Include an introduction and conclusion
+
+### Content Requirements:
+
+- Provide a thorough explanation of {{ topic }}
+- Include real-world applications or use cases
+- Discuss best practices and common pitfalls
+- If relevant, compare to alternative approaches or technologies
+- Reference any key libraries, tools, or documentation
+
+### Keywords to incorporate:
+{% for keyword in keywords %}
+- {{ keyword }}
+{% endfor %}
+{% if additional_keywords is defined %}
+{% for keyword in additional_keywords %}
+- {{ keyword }}
+{% endfor %}
+{% endif %}
+
+Please generate a complete, publication-ready blog post that would be valuable to Python developers.
