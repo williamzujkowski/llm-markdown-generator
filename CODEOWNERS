@@ -1,0 +1,21 @@
+# This is a CODEOWNERS file to define individuals or teams responsible for code in this repository.
+# Each line is a file pattern followed by one or more owners.
+
+# These owners will be the default owners for everything in the repo.
+# Unless a later match takes precedence, they will be requested for
+# review when someone opens a pull request.
+* @example-org/maintainers
+
+# Order is important; the last matching pattern takes the most precedence.
+
+# Example patterns:
+# /docs/ @example-org/docs-team
+# *.js @example-org/js-experts
+# /src/api/ @example-org/backend-team
+# /src/ui/ @example-org/frontend-team
+
+# You can also use email addresses if you prefer:
+# /scripts/ user1@example.com user2@example.com
+
+# Learn more about CODEOWNERS syntax at:
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners

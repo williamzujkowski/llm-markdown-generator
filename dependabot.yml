@@ -1,0 +1,26 @@
+version: 2
+updates:
+  # Maintain dependencies for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    
+  # Placeholder for other package ecosystems
+  # Uncomment and configure as needed for your project
+  
+  # - package-ecosystem: "pip" # For Python projects
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  
+  # - package-ecosystem: "npm" # For JavaScript/Node.js projects
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  
+  # - package-ecosystem: "maven" # For Java projects
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
