@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import typer
+from dotenv import load_dotenv
 
 from llm_markdown_generator.config import Config, load_config, load_front_matter_schema
 from llm_markdown_generator.front_matter import FrontMatterGenerator
@@ -37,6 +38,7 @@ def generate(
     api_key: Optional[str] = typer.Option(
         None, help="Directly provide an API key instead of using environment variables"
     ),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Display verbose output including token usage"),
 ) -> None:
     """Generate a markdown blog post for the specified topic."""
     try:
@@ -125,21 +127,22 @@ def generate(
         # Display results
         typer.echo(f"Content written to: {output_path}")
         
-        # Show token usage details
-        typer.echo("\nToken Usage Information:")
-        typer.echo(f"  Prompt tokens: {token_usage.prompt_tokens}")
-        typer.echo(f"  Completion tokens: {token_usage.completion_tokens}")
-        typer.echo(f"  Total tokens: {token_usage.total_tokens}")
-        
-        # Show cost information if available
-        if token_usage.cost is not None:
-            typer.echo(f"  Estimated cost: ${token_usage.cost:.6f}")
-        
-        # Show accumulated usage
-        typer.echo("\nAccumulated Usage:")
-        typer.echo(f"  Total tokens: {llm_provider.total_usage.total_tokens}")
-        if llm_provider.total_usage.cost is not None:
-            typer.echo(f"  Total cost: ${llm_provider.total_usage.cost:.6f}")
+        # Show token usage details only if verbose is True
+        if verbose:
+            typer.echo("\nToken Usage Information:")
+            typer.echo(f"  Prompt tokens: {token_usage.prompt_tokens}")
+            typer.echo(f"  Completion tokens: {token_usage.completion_tokens}")
+            typer.echo(f"  Total tokens: {token_usage.total_tokens}")
+            
+            # Show cost information if available
+            if token_usage.cost is not None:
+                typer.echo(f"  Estimated cost: ${token_usage.cost:.6f}")
+            
+            # Show accumulated usage
+            typer.echo("\nAccumulated Usage:")
+            typer.echo(f"  Total tokens: {llm_provider.total_usage.total_tokens}")
+            if llm_provider.total_usage.cost is not None:
+                typer.echo(f"  Total cost: ${llm_provider.total_usage.cost:.6f}")
 
     except Exception as e:
         typer.echo(f"Error: {str(e)}", err=True)
@@ -148,6 +151,8 @@ def generate(
 
 def main() -> None:
     """Entry point for the CLI."""
+    # Load environment variables from .env file if present
+    load_dotenv()
     app()
 
 
