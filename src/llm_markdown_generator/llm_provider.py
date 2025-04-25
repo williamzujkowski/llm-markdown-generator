@@ -139,7 +139,7 @@ class GeminiProvider(LLMProvider):
         """Initialize the Gemini provider.
         
         Args:
-            model_name: The name of the Gemini model to use (e.g., "gemini-1.0-pro").
+            model_name: The name of the Gemini model to use (e.g., "gemini-1.5-flash").
             api_key: Direct API key for Gemini. If provided, takes precedence over api_key_env_var.
             api_key_env_var: The name of the environment variable containing the API key.
             temperature: Controls randomness in the output (0.0-1.0).
