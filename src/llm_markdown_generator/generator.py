@@ -162,15 +162,26 @@ class MarkdownGenerator:
             # Apply front matter enhancer plugins
             for enhancer in self._front_matter_enhancers:
                 try:
-                    front_matter_data = enhancer(
+                    if hasattr(enhancer, "__name__"):
+                        plugin_name = enhancer.__name__
+                    else:
+                        plugin_name = str(enhancer)
+                        
+                    # Apply the enhancer
+                    enhanced_data = enhancer(
                         front_matter=front_matter_data,
                         content=content,
                         topic=topic_name,
                         **custom_params
                     )
+                    
+                    # Update front matter data
+                    if enhanced_data and isinstance(enhanced_data, dict):
+                        front_matter_data = enhanced_data
+                    
                 except Exception as e:
                     # Log error but continue with other plugins
-                    print(f"Error in front matter enhancer plugin: {str(e)}")
+                    print(f"Error in front matter enhancer plugin {plugin_name}: {str(e)}")
 
             # Generate front matter
             front_matter = self.front_matter_generator.generate(front_matter_data)

@@ -51,8 +51,8 @@ class FrontMatterGenerator:
 
             # Override with provided data
             for key, value in data.items():
-                if key in front_matter:
-                    front_matter[key] = value
+                # Include all keys from the data, not just those in schema
+                front_matter[key] = value
 
             # Add current date if not provided
             if "date" in front_matter and not data.get("date"):
@@ -60,10 +60,20 @@ class FrontMatterGenerator:
 
             # Convert to YAML
             yaml_str = yaml.dump(
-                front_matter, default_flow_style=False, sort_keys=False
+                front_matter, default_flow_style=False, sort_keys=False, 
+                explicit_start=False, explicit_end=False
             )
 
-            # Return with delimiters
+            # Add diagnostic output when debugging
+            try:
+                import os
+                if os.environ.get('DEBUG_FRONT_MATTER') == '1':
+                    print(f"DEBUG: Front matter data before YAML dump: {front_matter}")
+                    print(f"DEBUG: YAML dump output: {yaml_str}")
+            except:
+                pass
+                
+            # Return with delimiters (add a newline after opening delimiter for better readability)
             return f"---\n{yaml_str}---\n"
 
         except Exception as e:
