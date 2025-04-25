@@ -9,7 +9,7 @@ import os
 import argparse
 from pathlib import Path
 
-from llm_markdown_generator.cli import generate_markdown_content
+# We'll use the core components directly instead of the CLI module
 from llm_markdown_generator.config import Config
 from llm_markdown_generator.llm_provider import create_llm_provider
 from llm_markdown_generator.prompt_engine import PromptEngine
