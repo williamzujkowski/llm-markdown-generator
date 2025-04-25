@@ -1,0 +1,45 @@
+## Industry Trend Analysis Prompt: {{ title | default('Industry Trend Report') }}
+
+Please write a comprehensive analysis of current trends in **{{ topic }}** for {{ audience | default('industry stakeholders and decision-makers') }}. The analysis should be in Markdown format and provide insights into market dynamics, technological shifts, and strategic implications.
+
+### Guidelines:
+
+- Tone: {{ tone | default('authoritative, insightful, and forward-looking') }}
+- Length: Aim for a detailed analysis with at least 1000-1500 words
+- Structure with executive summary, key findings, and detailed analysis sections
+- Use data-driven observations where possible
+- Include market statistics formatted in tables
+- Balance current state assessment with predictive insights
+
+### Content Requirements:
+
+- Begin with an executive summary highlighting 3-5 key insights
+- Provide context on the industry's current state and recent evolution
+- Analyze major trends, including:
+  - Technological developments
+  - Market dynamics and competitive landscape
+  - Consumer/user behavior shifts
+  - Regulatory influences and compliance considerations
+  - Investment patterns and funding trends
+  - Geographic/regional variations
+- For each trend, address:
+  - Current status and recent developments
+  - Driving factors and catalysts
+  - Impact on different industry segments
+  - Expected trajectory over next 1-3 years
+- Identify emerging opportunities and challenges
+- Discuss implications for different stakeholders (incumbents, startups, investors, etc.)
+- Include relevant case studies or examples
+- End with strategic considerations and recommendations
+
+### Keywords to incorporate:
+{% for keyword in keywords %}
+- {{ keyword }}
+{% endfor %}
+{% if additional_keywords is defined %}
+{% for keyword in additional_keywords %}
+- {{ keyword }}
+{% endfor %}
+{% endif %}
+
+Please generate a complete, publication-ready industry trend analysis that provides valuable strategic insights on {{ topic }}. The analysis should be comprehensive, well-structured, and offer actionable perspectives for industry decision-makers.

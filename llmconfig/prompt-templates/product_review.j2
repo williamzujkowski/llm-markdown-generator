@@ -1,0 +1,41 @@
+## Product Review Prompt: {{ title | default('In-Depth Product Review') }}
+
+Please write a comprehensive, honest review of **{{ topic }}** for {{ audience | default('technical consumers') }}. The review should be in Markdown format and provide an objective assessment of the product's strengths and weaknesses.
+
+### Guidelines:
+
+- Tone: {{ tone | default('balanced, informative, and honest') }}
+- Length: Aim for a detailed review with at least 800-1200 words
+- Structure the review with clear headings and subheadings
+- Include proper formatting for product specifications
+- Maintain objectivity while providing clear value judgments
+- Avoid marketing language or unsubstantiated claims
+
+### Content Requirements:
+
+- Begin with a brief overview of the product and its intended use case
+- Include a section on technical specifications
+- Organize the review into logical categories:
+  - Design and build quality
+  - Features and functionality
+  - Performance metrics
+  - User experience
+  - Integration with other tools/systems (if applicable)
+  - Pricing and value proposition
+- Compare with alternatives or previous versions where relevant
+- Highlight both strengths and limitations
+- Provide specific examples from actual usage
+- Include a clear, justified rating or conclusion
+- End with recommendations for specific use cases or user types
+
+### Keywords to incorporate:
+{% for keyword in keywords %}
+- {{ keyword }}
+{% endfor %}
+{% if additional_keywords is defined %}
+{% for keyword in additional_keywords %}
+- {{ keyword }}
+{% endfor %}
+{% endif %}
+
+Please generate a complete, publication-ready product review that provides genuine value to readers considering this product. The review should be fair, detailed, and help readers determine if {{ topic }} is right for their specific needs.

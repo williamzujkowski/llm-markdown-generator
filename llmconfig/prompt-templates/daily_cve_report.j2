@@ -1,0 +1,80 @@
+## Daily CVE Report Prompt: {{ title | default('Critical Vulnerability Alert: Daily CVE Report') }}
+
+Please write a comprehensive daily report on **high-risk vulnerabilities (CVSS ≥ 9.0) with high EPSS scores** published on {{ report_date | default('the current date') }}. The report should be in Markdown format and provide cybersecurity teams with actionable intelligence on the most critical new vulnerabilities.
+
+### Guidelines:
+
+- Tone: {{ tone | default('urgent, precise, and actionable') }}
+- Focus exclusively on critical vulnerabilities (CVSS 9.0-10.0) with high exploitation probability
+- Structure with clear sections for each CVE, ordered by EPSS score (highest first)
+- Include all relevant technical details while maintaining readability
+- Emphasize immediate mitigation actions for each vulnerability
+- Prioritize vulnerabilities affecting widely-used enterprise software and infrastructure
+
+### Content Requirements:
+
+- Begin with an executive summary highlighting:
+  - Total number of critical vulnerabilities reported
+  - Most severe vulnerabilities requiring immediate attention
+  - Common trends or affected technologies
+  - Exploitation status (actively exploited, PoC available, etc.)
+
+- For each critical vulnerability, provide a structured entry with:
+  - **Heading**: CVE ID and brief vulnerability description
+  - **Vulnerability Snapshot**:
+    - CVE ID: [Link CVE ID to https://www.cve.org/CVERecord?id=CVE-ID-HERE]
+    - CVSS Score: [Score] ([Link Vector String to https://www.first.org/cvss/calculator/3.1#VECTOR-STRING-HERE])
+    - CVSS Severity: Critical
+    - EPSS Score: [Link Percentage to https://epss.cyentia.com/epss_scores-current.csv.gz]
+    - CWE Category: [Link CWE ID and Name to https://cwe.mitre.org/data/definitions/CWE-ID-HERE.html]
+    - Affected Products: [List of affected software/versions with vendor links where available]
+    - Vulnerability Type: [e.g., Remote Code Execution, Authentication Bypass]
+    - Patch Availability: [Link "Yes" to vendor patch URL if available / "No" / "Partial" with workaround URL]
+    - Exploitation Status: [Link to relevant sources if "Active"/"PoC Available"]
+
+  - **Technical Details**:
+    - Detailed vulnerability description
+    - Attack vectors and exploitation methods
+    - Root cause analysis
+    - Technical impact on affected systems
+
+  - **Exploitation Context**:
+    - Current exploitation status
+    - Observed attack patterns (if any)
+    - Potential threat actors likely to exploit
+    - Technical barriers to exploitation
+
+  - **Impact Assessment**:
+    - Potential business impact
+    - Data confidentiality, integrity, availability effects
+    - Scope of affected systems in typical enterprise environments
+
+  - **Mitigation and Remediation**:
+    - Official patches (with links)
+    - Temporary workarounds when patches aren't available
+    - Detection methods (logs, indicators of compromise)
+    - Recommended prioritization guidance
+
+- Conclude with:
+  - Summary of highest-priority actions
+  - Forecast of exploitation trends
+  - Recommendations for security operations
+
+- Include a comprehensive reference section with links to:
+  - Official vendor advisories
+  - NVD/NIST entries
+  - Security researcher reports
+  - CISA KEV catalog entries (if applicable)
+  - PoC repositories (without linking to actual exploit code)
+
+### Keywords to incorporate:
+{% for keyword in keywords %}
+- {{ keyword }}
+{% endfor %}
+{% if additional_keywords is defined %}
+{% for keyword in additional_keywords %}
+- {{ keyword }}
+{% endfor %}
+{% endif %}
+
+Please generate a complete, actionable daily CVE report that enables security teams to rapidly assess, prioritize, and address the most critical new vulnerabilities. Focus on accuracy, clarity, and providing concrete mitigation guidance that can be implemented immediately.

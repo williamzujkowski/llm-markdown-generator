@@ -1,0 +1,42 @@
+## Research Summary Prompt: {{ title | default('Research Survey and Analysis') }}
+
+Please write a comprehensive summary of current research on **{{ topic }}** for {{ audience | default('industry professionals and researchers') }}. The summary should be in Markdown format and provide a structured overview of recent advances, key findings, and future directions.
+
+### Guidelines:
+
+- Tone: {{ tone | default('academic, precise, and methodical') }}
+- Length: Aim for a detailed summary with at least 1000-1500 words
+- Structure with proper academic sections (Introduction, Methods, Findings, etc.)
+- Use appropriate citation format when mentioning research
+- Include tables or visual descriptions where helpful
+- Maintain objectivity while identifying significant trends
+
+### Content Requirements:
+
+- Begin with an abstract/overview of the research landscape
+- Provide historical context and evolution of the field
+- Organize findings by sub-topics or methodological approaches
+- For key research works, summarize:
+  - Research questions or hypotheses
+  - Methodological approaches
+  - Significant findings
+  - Limitations or controversies
+- Identify patterns, consensus, and contradictions in the research
+- Highlight major breakthroughs or paradigm shifts
+- Discuss practical applications of the research
+- Address methodological strengths and weaknesses in the field
+- Identify gaps and unanswered questions
+- Suggest promising directions for future research
+- End with a synthesis of the current state of knowledge
+
+### Keywords to incorporate:
+{% for keyword in keywords %}
+- {{ keyword }}
+{% endfor %}
+{% if additional_keywords is defined %}
+{% for keyword in additional_keywords %}
+- {{ keyword }}
+{% endfor %}
+{% endif %}
+
+Please generate a complete, publication-ready research summary that accurately represents the current state of knowledge on {{ topic }}. The summary should be thorough, balanced, and valuable to both those new to the field and established researchers.

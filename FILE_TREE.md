@@ -24,12 +24,26 @@ This document outlines the structure of the repository.
         - agent-rules.md
         - **context/** - *Context information for LLM agents*
             - .gitkeep
-        - **examples/** - *Exemplary interactions or code snippets*
-            - .gitkeep
+        - **examples/** - *Example scripts demonstrating framework usage*
+            - README.md - *Overview of examples and usage*
+            - error_handling_demo.py - *Demo of error handling features*
+            - generate_with_pydantic.py - *Generate content with Pydantic configs*
+            - test_plugin_system.py - *Demo of plugin system functionality*
+            - generate_specialized_content.py - *Using different prompt templates*
+            - **custom_plugins/** - *Custom plugin implementation examples*
+                - __init__.py
+                - example_plugins.py
         - **prompt-templates/** - *Templates for LLM interactions*
             - python_blog.j2 - *Template for Python blog posts*
             - javascript_blog.j2 - *Template for JavaScript blog posts*
             - data_science_blog.j2 - *Template for Data Science blog posts*
+            - technical_tutorial.j2 - *Template for step-by-step technical guides*
+            - product_review.j2 - *Template for detailed product reviews*
+            - comparative_analysis.j2 - *Template for comparing technologies/frameworks*
+            - research_summary.j2 - *Template for academic research summaries*
+            - industry_trend_analysis.j2 - *Template for market and industry trend analysis*
+            - security_advisory.j2 - *Template for security advisories on vulnerabilities*
+            - daily_cve_report.j2 - *Template for daily reports on critical CVEs*
         - **system-prompts/** - *System-level instructions for different AI agents*
             - .gitkeep
     - **output/** - *Output directory for generated markdown files*
@@ -48,6 +62,10 @@ This document outlines the structure of the repository.
             - llm_provider.py - *LLM providers (OpenAI and Google Gemini)*
             - prompt_engine.py - *Prompt template rendering*
             - token_tracker.py - *Token usage tracking and reporting*
+            - **plugins/** - *Plugin system for content processing*
+                - __init__.py - *Plugin loading and registration*
+                - content_processor.py - *Content processing plugin interface*
+                - front_matter_enhancer.py - *Front matter enhancement plugin interface*
     - **tests/** - *Test files*
         - __init__.py
         - **integration/** - *Integration tests*

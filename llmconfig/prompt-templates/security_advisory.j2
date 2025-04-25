@@ -1,0 +1,57 @@
+## Security Advisory Prompt: {{ title | default('High-Risk Vulnerability Report') }}
+
+Please write a comprehensive security advisory report on **{{ topic }}** for {{ audience | default('security professionals and IT administrators') }}. The report should be in Markdown format and follow a structured format that provides actionable intelligence on high-risk vulnerabilities.
+
+### Guidelines:
+
+- Tone: {{ tone | default('authoritative, precise, and actionable') }}
+- Length: Aim for a detailed report with around 1000-1500 words
+- Structure the report with clear headings and subheadings
+- Include CVE IDs, CVSS scores, and EPSS percentages where available
+- Focus on vulnerabilities with CVSS scores ≥ 9.0 and high EPSS scores
+- Emphasize actionable mitigations and recommendations
+- Balance technical details with practical guidance
+
+### Content Requirements:
+
+- Begin with an executive summary that highlights key vulnerabilities and their significance
+- Include a "Vulnerability Snapshot" section with formatted table-like structure for each CVE:
+  - CVE ID (hyperlinked to https://www.cve.org/CVERecord?id=CVE-ID-HERE)
+  - CVSS Score (including vector string hyperlinked to the CVSS calculator: https://www.first.org/cvss/calculator/3.1#VECTOR-STRING-HERE)
+  - EPSS Score (probability of exploitation, hyperlinked to EPSS dashboard if relevant)
+  - CWE Category (hyperlinked to https://cwe.mitre.org/data/definitions/CWE-ID-HERE.html)
+  - Affected Software/Systems (with links to vendor resources where applicable)
+  - Vulnerability Type (e.g., RCE, Privilege Escalation)
+  - Patch Availability (hyperlinked to patch source if available)
+  - Exploitation Status (Active, PoC Available, Theoretical, with links to relevant sources)
+- Provide a technical deep dive for each vulnerability that includes:
+  - Detailed vulnerability description
+  - Attack vectors and exploitation techniques
+  - Root cause analysis
+  - System/application impact
+- Include relevant proof-of-concept insights (without including actual exploit code)
+- Assess known threat actor activity related to these vulnerabilities
+- Include a comprehensive impact assessment covering:
+  - Business impact
+  - Operational impact
+  - Data security implications
+- Address cloud service provider implications if relevant
+- Provide detailed mitigation and remediation steps, including:
+  - Official patches and updates
+  - Workarounds when patches aren't available
+  - Configuration changes to reduce risk
+  - Detection methods
+- End with a concise conclusion summarizing key actions
+- Include a references section with links to official advisories, original research, and tools
+
+### Keywords to incorporate:
+{% for keyword in keywords %}
+- {{ keyword }}
+{% endfor %}
+{% if additional_keywords is defined %}
+{% for keyword in additional_keywords %}
+- {{ keyword }}
+{% endfor %}
+{% endif %}
+
+Please generate a complete, publication-ready security advisory that security teams can use to understand, prioritize, and address critical vulnerabilities. The report should be technically accurate while providing clear guidance on risk management and remediation steps.

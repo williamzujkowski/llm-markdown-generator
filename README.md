@@ -5,6 +5,7 @@ A configurable Python framework that leverages Large Language Models (LLMs) to g
 ## 🌟 Features
 
 - Generate markdown blog posts using LLMs (supports OpenAI and Google Gemini)
+- Multiple content types with specialized prompt templates (blogs, tutorials, reviews, analysis)
 - Customizable prompt templates using Jinja2
 - 11ty-compatible YAML front matter generation
 - Configuration-driven design for easy customization
@@ -128,6 +129,18 @@ You can switch between different LLM providers by editing the `provider_type` in
 ### Prompt Templates
 
 Prompt templates are stored in the `.llmconfig/prompt-templates/` directory as Jinja2 templates. You can create custom templates for different topics or content types.
+
+Available prompt templates:
+- `python_blog.j2`: For Python programming posts
+- `javascript_blog.j2`: For JavaScript and web development posts
+- `data_science_blog.j2`: For data science and machine learning posts
+- `technical_tutorial.j2`: For step-by-step technical guides
+- `product_review.j2`: For detailed product reviews
+- `comparative_analysis.j2`: For comparing technologies, frameworks, etc.
+- `research_summary.j2`: For academic research summaries
+- `industry_trend_analysis.j2`: For market and industry trend analysis
+- `security_advisory.j2`: For detailed security advisories on specific vulnerabilities
+- `daily_cve_report.j2`: For daily reports on critical CVEs with high EPSS scores
 
 ## 🔌 Plugin System
 

@@ -1,0 +1,45 @@
+## Comparative Analysis Prompt: {{ title | default('Comprehensive Comparison') }}
+
+Please write a thorough, balanced comparison of **{{ topic }}** for {{ audience | default('technical decision-makers') }}. The analysis should be in Markdown format and provide a detailed, side-by-side assessment of the alternatives.
+
+### Guidelines:
+
+- Tone: {{ tone | default('objective, analytical, and evidence-based') }}
+- Length: Aim for a detailed analysis with at least 1000-1500 words
+- Structure with clear headings, comparison tables, and visual elements (described in markdown)
+- Use a consistent evaluation framework across all options
+- Present balanced perspectives with evidence-based conclusions
+- Avoid bias toward any particular option
+
+### Content Requirements:
+
+- Begin with a clear introduction explaining the purpose of the comparison
+- Define the evaluation criteria explicitly
+- For each criterion, provide:
+  - A clear definition of what's being measured
+  - The importance/relevance of this criterion
+  - How each option performs against this measure
+  - Supporting evidence or examples
+- Use comparison tables to summarize key differences
+- Include sections on:
+  - Core features/capabilities
+  - Performance characteristics
+  - Implementation considerations
+  - Cost factors (if applicable)
+  - Ecosystem and community support
+  - Future outlook and sustainability
+- Address common migration or switching considerations
+- Provide scenario-based recommendations (e.g., "Best for X type of project")
+- End with a nuanced conclusion that acknowledges different use cases
+
+### Keywords to incorporate:
+{% for keyword in keywords %}
+- {{ keyword }}
+{% endfor %}
+{% if additional_keywords is defined %}
+{% for keyword in additional_keywords %}
+- {{ keyword }}
+{% endfor %}
+{% endif %}
+
+Please generate a complete, publication-ready comparative analysis that helps readers make informed decisions between the options within {{ topic }}. The analysis should be comprehensive, fair, and acknowledge that different choices may be optimal for different requirements.

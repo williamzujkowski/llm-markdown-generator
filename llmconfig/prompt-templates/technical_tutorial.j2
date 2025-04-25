@@ -1,0 +1,38 @@
+## Technical Tutorial Prompt: {{ title | default('Step-by-Step Technical Guide') }}
+
+Please write a comprehensive, step-by-step tutorial about **{{ topic }}** for {{ audience | default('technical users') }}. The tutorial should be in Markdown format and provide practical, actionable guidance.
+
+### Guidelines:
+
+- Tone: {{ tone | default('clear, instructional, and approachable') }}
+- Length: Aim for a detailed tutorial with at least 1000-1500 words
+- Include code examples for each step, using proper markdown code blocks with syntax highlighting
+- Structure the tutorial with clear headings, subheadings, and numbered steps
+- Include prerequisites and setup instructions
+- Include troubleshooting sections for common issues
+
+### Content Requirements:
+
+- Start with a clear introduction explaining what readers will learn and why it matters
+- List all prerequisites (knowledge, software, hardware, etc.)
+- Provide detailed setup instructions if applicable
+- Break down the process into logical, sequential steps
+- For each step:
+  - Explain the "why" before the "how"
+  - Include complete code examples
+  - Explain expected outputs or results
+- Include screenshots or diagrams where helpful
+- Provide a troubleshooting section addressing common issues
+- End with a summary and suggestions for next steps or further learning
+
+### Keywords to incorporate:
+{% for keyword in keywords %}
+- {{ keyword }}
+{% endfor %}
+{% if additional_keywords is defined %}
+{% for keyword in additional_keywords %}
+- {{ keyword }}
+{% endfor %}
+{% endif %}
+
+Please generate a complete, publication-ready tutorial that delivers practical value and successfully guides the reader through implementing {{ topic }} from start to finish.
