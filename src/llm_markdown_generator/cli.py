@@ -67,7 +67,7 @@ def generate(
         elif llm_provider_type == "gemini":
             # For Gemini, use a default model name rather than the one in config
             # (which might be set for OpenAI)
-            gemini_model = "gemini-1.5-flash"  # Using an available model from the API
+            gemini_model = "gemini-2.0-flash"  # Latest Gemini model with improved capabilities
             
             # For Gemini, prefer direct API key if provided, otherwise use env var
             if api_key:
