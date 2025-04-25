@@ -110,7 +110,7 @@ class TestSlugify:
 
     def test_slugify_non_ascii(self):
         """Test slugification with non-ASCII characters."""
-        assert slugify("Café & Résumé") == "caf-rsum"
+        assert slugify("Café & Résumé") == "cafe-resume"
 
     def test_slugify_leading_trailing_hyphens(self):
         """Test slugification with leading and trailing hyphens."""

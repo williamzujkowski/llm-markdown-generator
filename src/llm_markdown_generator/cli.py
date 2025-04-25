@@ -116,9 +116,30 @@ def generate(
         typer.echo(f"Generating content for topic: {topic} using {llm_provider_type}")
         content = generator.generate_content(topic, custom_params)
 
+        # Get token usage information
+        token_usage = llm_provider.get_token_usage()
+        
         # Write to file
         output_path = generator.write_to_file(content, title=title)
+        
+        # Display results
         typer.echo(f"Content written to: {output_path}")
+        
+        # Show token usage details
+        typer.echo("\nToken Usage Information:")
+        typer.echo(f"  Prompt tokens: {token_usage.prompt_tokens}")
+        typer.echo(f"  Completion tokens: {token_usage.completion_tokens}")
+        typer.echo(f"  Total tokens: {token_usage.total_tokens}")
+        
+        # Show cost information if available
+        if token_usage.cost is not None:
+            typer.echo(f"  Estimated cost: ${token_usage.cost:.6f}")
+        
+        # Show accumulated usage
+        typer.echo("\nAccumulated Usage:")
+        typer.echo(f"  Total tokens: {llm_provider.total_usage.total_tokens}")
+        if llm_provider.total_usage.cost is not None:
+            typer.echo(f"  Total cost: ${llm_provider.total_usage.cost:.6f}")
 
     except Exception as e:
         typer.echo(f"Error: {str(e)}", err=True)

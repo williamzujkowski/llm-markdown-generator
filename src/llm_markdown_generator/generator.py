@@ -8,7 +8,7 @@ from typing import Any, Dict, Optional
 
 from llm_markdown_generator.config import Config, TopicConfig
 from llm_markdown_generator.front_matter import FrontMatterGenerator, slugify
-from llm_markdown_generator.llm_provider import LLMProvider
+from llm_markdown_generator.llm_provider import LLMProvider, TokenUsage
 from llm_markdown_generator.prompt_engine import PromptEngine
 
 
@@ -93,6 +93,22 @@ class MarkdownGenerator:
 
         except Exception as e:
             raise GeneratorError(f"Error generating content for topic '{topic_name}': {str(e)}")
+    
+    def get_token_usage(self) -> TokenUsage:
+        """Get token usage information for the most recent generation.
+
+        Returns:
+            TokenUsage: Token usage information from the LLM provider.
+        """
+        return self.llm_provider.get_token_usage()
+    
+    def get_total_usage(self) -> TokenUsage:
+        """Get total token usage information across all generations.
+
+        Returns:
+            TokenUsage: Accumulated token usage information.
+        """
+        return self.llm_provider.total_usage
 
     def write_to_file(self, content: str, filename: Optional[str] = None, title: Optional[str] = None) -> str:
         """Write generated content to a file.

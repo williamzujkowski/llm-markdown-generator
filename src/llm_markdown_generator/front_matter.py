@@ -82,9 +82,15 @@ def slugify(title: str) -> str:
     # Convert to lowercase
     slug = title.lower()
 
+    # Normalize unicode characters to ASCII for better URL compatibility
+    import unicodedata
+    # First normalize the string to NFKD form (decomposed form)
+    slug = unicodedata.normalize('NFKD', slug)
+    # Then remove all non-ASCII characters (accents, etc.)
+    slug = ''.join([c for c in slug if not unicodedata.combining(c)])
+    
     # Replace non-alphanumeric characters with hyphens
     import re
-
     slug = re.sub(r"[^\w\s-]", "", slug)
     slug = re.sub(r"[\s_-]+", "-", slug)
     slug = re.sub(r"^-+|-+$", "", slug)

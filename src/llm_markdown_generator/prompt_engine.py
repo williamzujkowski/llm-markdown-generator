@@ -6,6 +6,7 @@ Handles loading and rendering of prompt templates using Jinja2.
 from pathlib import Path
 from typing import Any, Dict
 
+import jinja2
 from jinja2 import Environment, FileSystemLoader, Template
 
 
@@ -31,7 +32,11 @@ class PromptEngine:
         if not templates_path.exists() or not templates_path.is_dir():
             raise PromptError(f"Templates directory not found: {templates_dir}")
 
-        self.env = Environment(loader=FileSystemLoader(templates_path))
+        # Create environment with strict_variables enabled to raise errors on missing variables
+        self.env = Environment(
+            loader=FileSystemLoader(templates_path),
+            undefined=jinja2.StrictUndefined
+        )
 
     def load_template(self, template_name: str) -> Template:
         """Load a prompt template by name.

@@ -86,23 +86,29 @@ class TestPromptEngine:
 
     def test_render_prompt_missing_var(self, temp_templates_dir):
         """Test handling of missing variables in templates."""
-        engine = PromptEngine(temp_templates_dir)
-        # Missing 'audience' should be fine (conditional)
-        result = engine.render_prompt(
-            "advanced.j2",
-            {
-                "title": "Python Programming",
-                "topic": "Python 3.9 features",
-                "keywords": ["python", "programming", "features"],
-            },
-        )
-        assert "Target audience:" not in result
-
-        # Missing required variable should cause an error
+        # First, test that when strict_undefined is used, missing variables cause an error
         with pytest.raises(PromptError):
+            engine = PromptEngine(temp_templates_dir)
             engine.render_prompt(
                 "advanced.j2",
-                {"title": "Python Programming", "keywords": ["python"]},
+                {
+                    "title": "Python Programming",
+                    "topic": "Python 3.9 features",
+                    "keywords": ["python", "programming", "features"],
+                    # Missing 'audience' should cause an error with strict_undefined
+                },
+            )
+            
+        # Create a template that uses a required variable
+        required_var_template = Path(temp_templates_dir) / "required.j2"
+        required_var_template.write_text("{{ required_variable }}")
+        
+        # Missing required variable should cause an error
+        with pytest.raises(PromptError):
+            engine = PromptEngine(temp_templates_dir)
+            engine.render_prompt(
+                "required.j2",
+                {"optional_var": "This won't help"},
             )
 
     def test_render_prompt_invalid_template(self, temp_templates_dir):
