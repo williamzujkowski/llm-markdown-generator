@@ -1,16 +1,25 @@
 #!/usr/bin/env python3
 """
-Simple script to test OpenAI and Gemini API keys.
+Integration test to verify OpenAI and Gemini API keys.
 
 This script verifies that the API keys in your .env file are working
-by making a minimal API call to each provider.
+by making a minimal API call to each provider. It's useful for quick
+verification of API connectivity and key validity.
 """
 
 import os
 import json
 import requests
 from dotenv import load_dotenv
-from src.llm_markdown_generator.llm_provider import OpenAIProvider, LLMError
+
+# Update the import path to access the main package
+from llm_markdown_generator.llm_provider import OpenAIProvider, GeminiProvider
+from llm_markdown_generator.error_handler import (
+    AuthError,
+    NetworkError,
+    LLMErrorBase,
+    RetryConfig
+)
 
 def test_openai_api_key():
     """Test the OpenAI API key with a minimal request."""
@@ -20,7 +29,8 @@ def test_openai_api_key():
             model_name="gpt-3.5-turbo",  # Using a smaller model for the test
             api_key_env_var="OPENAI_API_KEY",
             temperature=0.7,
-            max_tokens=10  # Minimal token generation for testing
+            max_tokens=10,  # Minimal token generation for testing
+            retry_config=RetryConfig(max_retries=0)  # Disable retries for testing
         )
         
         # Make a simple API call
@@ -30,8 +40,16 @@ def test_openai_api_key():
         print(f"   Response: {response}")
         return True
     
-    except LLMError as e:
+    except AuthError as e:
         print(f"❌ OpenAI API key test failed: {str(e)}")
+        return False
+    
+    except NetworkError as e:
+        print(f"❌ Network error testing OpenAI API: {str(e)}")
+        return False
+    
+    except LLMErrorBase as e:
+        print(f"❌ Error testing OpenAI API key: {str(e)}")
         return False
     
     except Exception as e:
@@ -39,58 +57,39 @@ def test_openai_api_key():
         return False
 
 def test_gemini_api_key():
-    """Test the Gemini API key with a minimal direct API request."""
+    """Test the Gemini API key with the provider class."""
     try:
         # Get API key from environment
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is not set")
         
-        # Make a direct API call to Gemini
-        model = "gemini-2.0-flash"  # Use the Gemini 2.0 Flash model
-        url = f"https://generativelanguage.googleapis.com/v1/models/{model}:generateContent?key={api_key}"
+        # Create Gemini provider
+        provider = GeminiProvider(
+            model_name="gemini-2.0-flash",  # Use the Gemini 2.0 Flash model
+            api_key=api_key,
+            temperature=0.7,
+            max_tokens=10,  # Minimal token generation for testing
+            retry_config=RetryConfig(max_retries=0)  # Disable retries for testing
+        )
         
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": "Say hello:"
-                        }
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 10
-            }
-        }
+        # Make a simple API call
+        response = provider.generate_text("Say hello:")
         
-        response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()
-        response_json = response.json()
-        
-        # Extract the generated text
-        try:
-            generated_text = response_json["candidates"][0]["content"]["parts"][0]["text"]
-            print(f"✅ Gemini API key is working!")
-            print(f"   Response: {generated_text.strip()}")
-            return True
-        except (KeyError, IndexError) as e:
-            print(f"❌ Error parsing Gemini API response: {str(e)}")
-            print(f"   Raw response: {json.dumps(response_json, indent=2)}")
-            return False
-        
-    except requests.RequestException as e:
-        if hasattr(e, 'response') and e.response is not None:
-            try:
-                error_message = e.response.json().get("error", {}).get("message", str(e))
-                print(f"❌ Gemini API key test failed: {error_message}")
-            except (ValueError, AttributeError):
-                print(f"❌ Gemini API key test failed: {str(e)}")
-        else:
-            print(f"❌ Gemini API key test failed: {str(e)}")
+        print(f"✅ Gemini API key is working!")
+        print(f"   Response: {response}")
+        return True
+    
+    except AuthError as e:
+        print(f"❌ Gemini API key test failed: {str(e)}")
+        return False
+    
+    except NetworkError as e:
+        print(f"❌ Network error testing Gemini API: {str(e)}")
+        return False
+    
+    except LLMErrorBase as e:
+        print(f"❌ Error testing Gemini API key: {str(e)}")
         return False
     
     except Exception as e:
