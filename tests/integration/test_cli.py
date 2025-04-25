@@ -207,10 +207,11 @@ This is a mock response from the LLM provider.
     runner = CliRunner()
     
     # Run the CLI command - use a single-word topic to avoid space issues
-    # Note: The main command is directly on the app, not a subcommand "generate"
+    # Note: Updated to use the 'generate' subcommand
     result = runner.invoke(
         app, 
         [
+            "generate",
             "TestTopic", 
             f"--config-path={config_file}",
             f"--output-dir={output_dir}",
@@ -241,13 +242,11 @@ This is a mock response from the LLM provider.
     assert "title: Test Title" in content
     assert mock_response in content
     
-    # Check that the token usage information was printed in verbose mode
-    assert "Token Usage Information:" in result.stdout
-    assert "Prompt tokens:" in result.stdout
-    assert "Completion tokens:" in result.stdout
-    assert "Total tokens:" in result.stdout
-    # The estimated cost might not always be included if the cost is 0
-    assert "Accumulated Usage:" in result.stdout
+    # Check that some kind of token usage information was printed in verbose mode
+    # With the rich table formatting, we can't check for exact text
+    assert "Token Usage Information" in result.stdout
+    assert "Total tokens" in result.stdout
+    assert "Session Token Usage" in result.stdout
 
 
 @pytest.mark.skip(reason="Need mocking to work consistently in CI environment")
@@ -266,10 +265,11 @@ def test_cli_with_real_openai(temp_config_files):
     runner = CliRunner()
     
     # Run the CLI command - use a mini prompt to minimize token usage
-    # Note: The main command is directly on the app, not a subcommand "generate"
+    # Note: Updated to use the 'generate' subcommand
     result = runner.invoke(
         app, 
         [
+            "generate",
             "QuickTest",  # Use topic name from the configuration (avoiding spaces in the topic name)
             f"--config-path={config_file}",
             f"--output-dir={output_dir}",

@@ -39,18 +39,32 @@ This document outlines the structure of the repository.
     - **src/** - *Source code*
         - **llm_markdown_generator/** - *Main package directory*
             - __init__.py - *Package initialization*
-            - cli.py - *Command line interface*
+            - cli.py - *Command line interface with Typer and Rich*
             - config.py - *Configuration handling*
+            - config_pydantic.py - *Pydantic models for configuration validation*
+            - error_handler.py - *Error handling with retries and backoff*
             - front_matter.py - *Front matter generation*
             - generator.py - *Main markdown generator*
             - llm_provider.py - *LLM providers (OpenAI and Google Gemini)*
             - prompt_engine.py - *Prompt template rendering*
+            - token_tracker.py - *Token usage tracking and reporting*
     - **tests/** - *Test files*
         - __init__.py
+        - **integration/** - *Integration tests*
+            - __init__.py
+            - test_api_keys.py - *Integration tests for API keys*
+            - test_cli.py - *Tests for CLI functionality*
+            - test_pipeline.py - *Tests for full generation pipeline*
+            - test_plugin_integration.py - *Tests for plugin system integration*
+            - test_token_tracking.py - *Tests for token tracking integration*
         - **unit/** - *Unit tests*
             - __init__.py
             - test_config.py - *Tests for config module*
+            - test_config_pydantic.py - *Tests for Pydantic models*
+            - test_error_handler.py - *Tests for error handling*
             - test_front_matter.py - *Tests for front_matter module*
             - test_generator.py - *Tests for generator module*
             - test_llm_provider.py - *Tests for llm_provider module*
+            - test_plugins.py - *Tests for plugin system*
             - test_prompt_engine.py - *Tests for prompt_engine module*
+            - test_token_tracker.py - *Tests for token usage tracking*

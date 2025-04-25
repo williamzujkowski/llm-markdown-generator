@@ -27,13 +27,16 @@ class TestPluginRegistry:
     
     def test_register_and_get_plugin(self):
         """Test registering and retrieving a plugin."""
+        # Use a unique name for this test to avoid conflicts with other tests
+        unique_name = f"test_plugin_{id(self)}"
+        
         # Define a test plugin
-        @plugin_hook("test_category", "test_plugin")
+        @plugin_hook("test_category", unique_name)
         def test_plugin_func(x: int) -> int:
             return x * 2
             
         # Get the plugin
-        plugin = get_plugin("test_category", "test_plugin")
+        plugin = get_plugin("test_category", unique_name)
         
         # Verify
         assert plugin is test_plugin_func
