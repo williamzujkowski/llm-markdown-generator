@@ -82,3 +82,4 @@ yarn-error.log*
 # Generated content
 output/
 output/*
+.aider*
