@@ -6,24 +6,61 @@ Please write a comprehensive, step-by-step tutorial about **{{ topic }}** for {{
 
 - Tone: {{ tone | default('clear, instructional, and approachable') }}
 - Length: Aim for a detailed tutorial with at least 1000-1500 words
-- Include code examples for each step, using proper markdown code blocks with syntax highlighting
-- Structure the tutorial with clear headings, subheadings, and numbered steps
-- Include prerequisites and setup instructions
-- Include troubleshooting sections for common issues
+- Include code examples for each step, using proper markdown code blocks with syntax highlighting and line numbers where appropriate
+- Structure the tutorial with clear, sequential headings (e.g., "Step 1: Setup Environment", "Step 2: Install Dependencies")
+- Include a "Prerequisites" section with all required software versions and system requirements as a formatted table or checklist
+- Add an "Environment Setup" section with platform-specific instructions (Windows/macOS/Linux)
+- Include "Troubleshooting" sections with formatted tables (Problem | Cause | Solution)
+- Add "Key Concepts" callout boxes to explain important principles before diving into implementation
+- Use diagrams or illustrations (described in markdown) to visualize complex processes
 
 ### Content Requirements:
 
-- Start with a clear introduction explaining what readers will learn and why it matters
-- List all prerequisites (knowledge, software, hardware, etc.)
-- Provide detailed setup instructions if applicable
-- Break down the process into logical, sequential steps
+- Start with a clear introduction explaining:
+  - What readers will learn (with specific outcomes/deliverables)
+  - Why it matters (practical applications and benefits)
+  - Who should follow this tutorial (skill level, role)
+  - Estimated time to complete
+
+- Create a "Prerequisites" section as a formatted checklist with:
+  - Required software with version numbers and download links
+  - Hardware requirements (if applicable)
+  - Background knowledge or skills needed
+  - Links to prerequisite tutorials if needed
+
+- Provide a comprehensive "Environment Setup" section with:
+  - Step-by-step installation instructions with commands
+  - Configuration steps with file examples
+  - Verification steps to confirm proper setup
+  - Platform-specific instructions in tabbed sections
+
+- Break down the process into logical, sequential steps:
+  - Number each main step clearly (Step 1, Step 2, etc.)
+  - Use consistent formatting for all steps
+  - Include timestamps or progress indicators where appropriate
+  - Mark optional steps clearly
+
 - For each step:
+  - Begin with a "Key Concept" box explaining the underlying principle
   - Explain the "why" before the "how"
-  - Include complete code examples
-  - Explain expected outputs or results
-- Include screenshots or diagrams where helpful
-- Provide a troubleshooting section addressing common issues
-- End with a summary and suggestions for next steps or further learning
+  - Include complete code examples with line numbers and comments
+  - Show expected outputs or results (formatted as console output)
+  - Add warning boxes for potential pitfalls
+  - Include checkpoints to validate progress
+
+- Create a "Troubleshooting Guide" with:
+  - Problem description
+  - Common causes
+  - Step-by-step solutions
+  - Diagnostic commands or procedures
+  - Links to relevant documentation
+
+- End with:
+  - A summary of what was accomplished
+  - Suggestions for next steps or further learning (with links)
+  - Related tutorials or resources
+  - A checklist of key points covered
+  - Sample projects or exercises to reinforce learning
 
 ### Keywords to incorporate:
 {% for keyword in keywords %}
