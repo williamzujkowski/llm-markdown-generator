@@ -10,6 +10,7 @@ verification of API connectivity and key validity.
 import os
 import json
 import requests
+import pytest
 from dotenv import load_dotenv
 
 # Update the import path to access the main package
@@ -21,6 +22,13 @@ from llm_markdown_generator.error_handler import (
     RetryConfig
 )
 
+# Load environment variables
+load_dotenv()
+
+@pytest.mark.skipif(
+    not os.environ.get("OPENAI_API_KEY"), 
+    reason="OPENAI_API_KEY environment variable not set"
+)
 def test_openai_api_key():
     """Test the OpenAI API key with a minimal request."""
     try:
@@ -38,24 +46,28 @@ def test_openai_api_key():
         
         print(f"✅ OpenAI API key is working!")
         print(f"   Response: {response}")
-        return True
+        assert response, "Response should not be empty"
     
     except AuthError as e:
         print(f"❌ OpenAI API key test failed: {str(e)}")
-        return False
+        assert False, f"Authentication error: {str(e)}"
     
     except NetworkError as e:
         print(f"❌ Network error testing OpenAI API: {str(e)}")
-        return False
+        assert False, f"Network error: {str(e)}"
     
     except LLMErrorBase as e:
         print(f"❌ Error testing OpenAI API key: {str(e)}")
-        return False
+        assert False, f"LLM error: {str(e)}"
     
     except Exception as e:
         print(f"❌ Unexpected error testing OpenAI API key: {str(e)}")
-        return False
+        assert False, f"Unexpected error: {str(e)}"
 
+@pytest.mark.skipif(
+    not os.environ.get("GEMINI_API_KEY"), 
+    reason="GEMINI_API_KEY environment variable not set"
+)
 def test_gemini_api_key():
     """Test the Gemini API key with the provider class."""
     try:
@@ -78,23 +90,23 @@ def test_gemini_api_key():
         
         print(f"✅ Gemini API key is working!")
         print(f"   Response: {response}")
-        return True
+        assert response, "Response should not be empty"
     
     except AuthError as e:
         print(f"❌ Gemini API key test failed: {str(e)}")
-        return False
+        assert False, f"Authentication error: {str(e)}"
     
     except NetworkError as e:
         print(f"❌ Network error testing Gemini API: {str(e)}")
-        return False
+        assert False, f"Network error: {str(e)}"
     
     except LLMErrorBase as e:
         print(f"❌ Error testing Gemini API key: {str(e)}")
-        return False
+        assert False, f"LLM error: {str(e)}"
     
     except Exception as e:
         print(f"❌ Unexpected error testing Gemini API key: {str(e)}")
-        return False
+        assert False, f"Unexpected error: {str(e)}"
 
 def main():
     """Main function to test both API keys."""
