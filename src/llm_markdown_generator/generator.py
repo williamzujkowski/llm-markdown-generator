@@ -4,7 +4,7 @@ Combines front matter and LLM-generated content into a final markdown file.
 """
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from llm_markdown_generator.config import Config, TopicConfig
 from llm_markdown_generator.front_matter import FrontMatterGenerator, slugify
@@ -14,7 +14,6 @@ from llm_markdown_generator.prompt_engine import PromptEngine
 
 class GeneratorError(Exception):
     """Raised when there is an error generating markdown content."""
-
     pass
 
 
@@ -40,6 +39,81 @@ class MarkdownGenerator:
         self.llm_provider = llm_provider
         self.prompt_engine = prompt_engine
         self.front_matter_generator = front_matter_generator
+        
+        # Initialize plugin registry
+        self._content_processors = []
+        self._front_matter_enhancers = []
+        
+    def register_content_processor(self, processor_func) -> None:
+        """Register a content processor plugin.
+        
+        Args:
+            processor_func: A function that takes content and returns modified content
+        """
+        self._content_processors.append(processor_func)
+        
+    def register_front_matter_enhancer(self, enhancer_func) -> None:
+        """Register a front matter enhancer plugin.
+        
+        Args:
+            enhancer_func: A function that takes front matter and returns enhanced front matter
+        """
+        self._front_matter_enhancers.append(enhancer_func)
+        
+    def clear_plugins(self) -> None:
+        """Clear all registered plugins."""
+        self._content_processors = []
+        self._front_matter_enhancers = []
+        
+    def load_plugins(self) -> Dict[str, int]:
+        """Load plugins from the plugins directory.
+        
+        Returns:
+            A dictionary with plugin categories and count of loaded plugins
+        """
+        from llm_markdown_generator.plugins import (
+            get_plugin, list_plugins, load_plugins_from_directory
+        )
+        
+        # Import from the package's plugins directory
+        try:
+            from importlib.util import find_spec
+            from importlib import import_module
+            
+            package_plugins = find_spec('llm_markdown_generator.plugins')
+            if package_plugins:
+                # Import built-in plugins
+                import_module('llm_markdown_generator.plugins.content_processor')
+                import_module('llm_markdown_generator.plugins.front_matter_enhancer')
+            
+            # Load any custom plugins from config directory if specified
+            if hasattr(self.config, 'plugins_dir') and self.config.plugins_dir:
+                plugins_dir = Path(self.config.plugins_dir)
+                if plugins_dir.exists() and plugins_dir.is_dir():
+                    load_plugins_from_directory(plugins_dir)
+        except Exception as e:
+            raise GeneratorError(f"Error loading plugins: {str(e)}")
+            
+        # Register plugins based on their categories
+        plugins_loaded = {'content_processor': 0, 'front_matter_enhancer': 0}
+        
+        plugin_list = list_plugins()
+        
+        # Load content processors
+        if 'content_processor' in plugin_list:
+            for name in plugin_list['content_processor']:
+                plugin_func = get_plugin('content_processor', name)
+                self.register_content_processor(plugin_func)
+                plugins_loaded['content_processor'] += 1
+                
+        # Load front matter enhancers
+        if 'front_matter_enhancer' in plugin_list:
+            for name in plugin_list['front_matter_enhancer']:
+                plugin_func = get_plugin('front_matter_enhancer', name)
+                self.register_front_matter_enhancer(plugin_func)
+                plugins_loaded['front_matter_enhancer'] += 1
+                
+        return plugins_loaded
 
     def generate_content(self, topic_name: str, custom_params: Dict[str, Any] = None) -> str:
         """Generate markdown content for a specific topic.
@@ -84,12 +158,40 @@ class MarkdownGenerator:
                 "tags": topic_config.keywords,
                 "category": topic_name,
             }
+            
+            # Apply front matter enhancer plugins
+            for enhancer in self._front_matter_enhancers:
+                try:
+                    front_matter_data = enhancer(
+                        front_matter=front_matter_data,
+                        content=content,
+                        topic=topic_name,
+                        **custom_params
+                    )
+                except Exception as e:
+                    # Log error but continue with other plugins
+                    print(f"Error in front matter enhancer plugin: {str(e)}")
 
             # Generate front matter
             front_matter = self.front_matter_generator.generate(front_matter_data)
 
             # Combine front matter and content
-            return f"{front_matter}\n{content}"
+            full_content = f"{front_matter}\n{content}"
+            
+            # Apply content processor plugins
+            for processor in self._content_processors:
+                try:
+                    full_content = processor(
+                        content=full_content,
+                        topic=topic_name,
+                        front_matter_data=front_matter_data,
+                        **custom_params
+                    )
+                except Exception as e:
+                    # Log error but continue with other plugins
+                    print(f"Error in content processor plugin: {str(e)}")
+
+            return full_content
 
         except Exception as e:
             raise GeneratorError(f"Error generating content for topic '{topic_name}': {str(e)}")

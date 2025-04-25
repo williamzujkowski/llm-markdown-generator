@@ -58,6 +58,15 @@ def generate(
     api_key: Optional[str] = typer.Option(
         None, help="Directly provide an API key instead of using environment variables"
     ),
+    plugins: Optional[str] = typer.Option(
+        None, help="Comma-separated list of plugins to enable (e.g., 'add_timestamp,add_reading_time')"
+    ),
+    plugins_dir: Optional[str] = typer.Option(
+        None, help="Directory containing custom plugins"
+    ),
+    no_plugins: bool = typer.Option(
+        False, help="Disable loading of plugins"
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Display verbose output including token usage"),
     max_retries: int = typer.Option(3, "--retries", "-r", help="Number of retries for API calls"),
     retry_delay: float = typer.Option(1.0, "--retry-delay", help="Base delay in seconds between retries"),
@@ -137,6 +146,47 @@ def generate(
             prompt_engine=prompt_engine,
             front_matter_generator=front_matter_generator,
         )
+        
+        # Handle plugin loading
+        if not no_plugins:
+            # Set plugins directory if provided
+            if plugins_dir:
+                setattr(config, 'plugins_dir', plugins_dir)
+            
+            # Load all available plugins
+            try:
+                plugin_counts = generator.load_plugins()
+                if verbose:
+                    for category, count in plugin_counts.items():
+                        if count > 0:
+                            typer.echo(f"Loaded {count} {category} plugins")
+                
+                # Enable specific plugins if requested
+                if plugins:
+                    from llm_markdown_generator.plugins import get_plugin, PluginError
+                    
+                    # Clear default plugins if specific ones are requested
+                    generator.clear_plugins()
+                    
+                    plugin_names = [p.strip() for p in plugins.split(',')]
+                    for plugin_name in plugin_names:
+                        try:
+                            # Try content processor category first
+                            try:
+                                plugin_func = get_plugin('content_processor', plugin_name)
+                                generator.register_content_processor(plugin_func)
+                                if verbose:
+                                    typer.echo(f"Enabled content processor plugin: {plugin_name}")
+                            except PluginError:
+                                # Try front matter enhancer category next
+                                plugin_func = get_plugin('front_matter_enhancer', plugin_name)
+                                generator.register_front_matter_enhancer(plugin_func)
+                                if verbose:
+                                    typer.echo(f"Enabled front matter enhancer plugin: {plugin_name}")
+                        except PluginError as e:
+                            typer.echo(f"Warning: Plugin '{plugin_name}' not found: {str(e)}", err=True)
+            except Exception as e:
+                typer.echo(f"Warning: Error loading plugins: {str(e)}", err=True)
 
         # Prepare custom parameters
         custom_params: Dict[str, Any] = {}
