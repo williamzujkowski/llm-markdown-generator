@@ -4,16 +4,36 @@ Provides a command-line tool for generating markdown content using LLMs.
 """
 
 import os
+import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import typer
 from dotenv import load_dotenv
 
-from llm_markdown_generator.config import Config, load_config, load_front_matter_schema
+# Set up logging
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
+
+# Import Pydantic-based configuration (while maintaining backward compatibility)
+try:
+    from llm_markdown_generator.config_pydantic import Config, load_config, load_front_matter_schema
+except ImportError:
+    # Fall back to dataclass-based configuration if Pydantic is not available
+    from llm_markdown_generator.config import Config, load_config, load_front_matter_schema
+
+from llm_markdown_generator.error_handler import (
+    AuthError,
+    LLMErrorBase,
+    NetworkError,
+    RateLimitError,
+    RetryConfig,
+    ServiceUnavailableError,
+    TimeoutError
+)
 from llm_markdown_generator.front_matter import FrontMatterGenerator
 from llm_markdown_generator.generator import MarkdownGenerator
-from llm_markdown_generator.llm_provider import GeminiProvider, LLMError, OpenAIProvider
+from llm_markdown_generator.llm_provider import GeminiProvider, OpenAIProvider
 from llm_markdown_generator.prompt_engine import PromptEngine
 
 app = typer.Typer(help="Generate markdown blog posts using LLMs")
@@ -39,6 +59,8 @@ def generate(
         None, help="Directly provide an API key instead of using environment variables"
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Display verbose output including token usage"),
+    max_retries: int = typer.Option(3, "--retries", "-r", help="Number of retries for API calls"),
+    retry_delay: float = typer.Option(1.0, "--retry-delay", help="Base delay in seconds between retries"),
 ) -> None:
     """Generate a markdown blog post for the specified topic."""
     try:
@@ -52,6 +74,14 @@ def generate(
         # Load front matter schema
         front_matter_schema = load_front_matter_schema(config.front_matter.schema_path)
 
+        # Configure retry strategy
+        retry_config = RetryConfig(
+            max_retries=max_retries,
+            base_delay=retry_delay,
+            backoff_factor=2.0,
+            jitter=True
+        )
+        
         # Determine provider type (with CLI override if provided)
         llm_provider_type = provider.lower() if provider else config.llm_provider.provider_type.lower()
 
@@ -63,6 +93,7 @@ def generate(
                 temperature=config.llm_provider.temperature,
                 max_tokens=config.llm_provider.max_tokens,
                 additional_params=config.llm_provider.additional_params,
+                retry_config=retry_config,
             )
         elif llm_provider_type == "gemini":
             # For Gemini, use a default model name rather than the one in config
@@ -77,6 +108,7 @@ def generate(
                     temperature=config.llm_provider.temperature,
                     max_tokens=config.llm_provider.max_tokens,
                     additional_params=config.llm_provider.additional_params,
+                    retry_config=retry_config,
                 )
             else:
                 llm_provider = GeminiProvider(
@@ -85,9 +117,10 @@ def generate(
                     temperature=config.llm_provider.temperature,
                     max_tokens=config.llm_provider.max_tokens,
                     additional_params=config.llm_provider.additional_params,
+                    retry_config=retry_config,
                 )
         else:
-            raise LLMError(f"Unsupported LLM provider type: {llm_provider_type}")
+            raise LLMErrorBase(f"Unsupported LLM provider type: {llm_provider_type}")
 
         # Create prompt engine
         # Assume templates are in .llmconfig/prompt-templates/
@@ -144,9 +177,50 @@ def generate(
             if llm_provider.total_usage.cost is not None:
                 typer.echo(f"  Total cost: ${llm_provider.total_usage.cost:.6f}")
 
-    except Exception as e:
-        typer.echo(f"Error: {str(e)}", err=True)
+    except AuthError as e:
+        typer.echo(f"Authentication Error: {str(e)}", err=True)
+        typer.echo("Please check your API key or environment variables.", err=True)
         raise typer.Exit(code=1)
+        
+    except RateLimitError as e:
+        retry_msg = f" Try again in {e.retry_after} seconds." if e.retry_after else ""
+        typer.echo(f"Rate Limit Error: {str(e)}{retry_msg}", err=True)
+        typer.echo("Consider reducing your request frequency or upgrading your API tier.", err=True)
+        raise typer.Exit(code=2)
+        
+    except NetworkError as e:
+        typer.echo(f"Network Error: {str(e)}", err=True)
+        typer.echo("Please check your internet connection and try again.", err=True)
+        raise typer.Exit(code=3)
+        
+    except TimeoutError as e:
+        typer.echo(f"Timeout Error: {str(e)}", err=True)
+        typer.echo("The request took too long to complete. Please try again later.", err=True)
+        raise typer.Exit(code=4)
+        
+    except ServiceUnavailableError as e:
+        typer.echo(f"Service Unavailable: {str(e)}", err=True)
+        typer.echo("The LLM service is currently unavailable. Please try again later.", err=True)
+        raise typer.Exit(code=5)
+        
+    except LLMErrorBase as e:
+        typer.echo(f"LLM Error: {str(e)}", err=True)
+        if verbose:
+            # Add detailed error information in verbose mode
+            if hasattr(e, 'category'):
+                typer.echo(f"  Category: {e.category.value}")
+            if hasattr(e, 'status_code') and e.status_code:
+                typer.echo(f"  Status Code: {e.status_code}")
+            if hasattr(e, 'request_id') and e.request_id:
+                typer.echo(f"  Request ID: {e.request_id}")
+        raise typer.Exit(code=10)
+        
+    except Exception as e:
+        typer.echo(f"Unexpected Error: {str(e)}", err=True)
+        if verbose:
+            import traceback
+            typer.echo(traceback.format_exc(), err=True)
+        raise typer.Exit(code=99)
 
 
 def main() -> None:
