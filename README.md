@@ -60,7 +60,7 @@ llm-markdown data_science --title "Introduction to Linear Regression" --output-d
 llm-markdown python --title "Python Decorators Guide" --provider gemini
 
 # Provide an API key directly on the command line
-llm-markdown python --title "Python Tips" --provider gemini --api-key "AIzaSyBiyiSjDToD9rAMR1UXPwpBlrHuuT5CTG0"
+llm-markdown python --title "Python Tips" --provider gemini --api-key "YOUR_API_KEY_HERE"
 ```
 
 ## ⚙️ Configuration
