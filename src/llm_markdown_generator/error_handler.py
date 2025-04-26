@@ -89,7 +89,7 @@ class AuthError(LLMErrorBase):
     def __init__(
         self,
         message: str,
-        **kwargs
+        **kwargs: Any
     ) -> None:
         """Initialize the authentication error."""
         super().__init__(
@@ -107,7 +107,7 @@ class RateLimitError(LLMErrorBase):
         self,
         message: str,
         retry_after: Optional[int] = None,
-        **kwargs
+        **kwargs: Any
     ) -> None:
         """Initialize the rate limit error.
         
@@ -131,7 +131,7 @@ class NetworkError(LLMErrorBase):
     def __init__(
         self,
         message: str,
-        **kwargs
+        **kwargs: Any
     ) -> None:
         """Initialize the network error."""
         super().__init__(
@@ -148,7 +148,7 @@ class TimeoutError(LLMErrorBase):
     def __init__(
         self,
         message: str,
-        **kwargs
+        **kwargs: Any
     ) -> None:
         """Initialize the timeout error."""
         super().__init__(
@@ -165,7 +165,7 @@ class ServiceUnavailableError(LLMErrorBase):
     def __init__(
         self,
         message: str,
-        **kwargs
+        **kwargs: Any
     ) -> None:
         """Initialize the service unavailable error."""
         super().__init__(
@@ -182,7 +182,7 @@ class InvalidRequestError(LLMErrorBase):
     def __init__(
         self,
         message: str,
-        **kwargs
+        **kwargs: Any
     ) -> None:
         """Initialize the invalid request error."""
         super().__init__(
@@ -199,7 +199,7 @@ class ContentFilterError(LLMErrorBase):
     def __init__(
         self,
         message: str,
-        **kwargs
+        **kwargs: Any
     ) -> None:
         """Initialize the content filter error."""
         super().__init__(
@@ -216,7 +216,7 @@ class ContextLengthError(LLMErrorBase):
     def __init__(
         self,
         message: str,
-        **kwargs
+        **kwargs: Any
     ) -> None:
         """Initialize the context length error."""
         super().__init__(
@@ -233,7 +233,7 @@ class ParsingError(LLMErrorBase):
     def __init__(
         self,
         message: str,
-        **kwargs
+        **kwargs: Any
     ) -> None:
         """Initialize the parsing error."""
         super().__init__(
@@ -327,8 +327,8 @@ def retry_with_backoff(
     func: Callable[..., T],
     retry_config: Optional[RetryConfig] = None,
     on_retry: Optional[Callable[[int, Exception, float], None]] = None,
-    *args,
-    **kwargs
+    *args: Any,
+    **kwargs: Any
 ) -> T:
     """Execute a function with retry logic and exponential backoff.
     
@@ -348,7 +348,7 @@ def retry_with_backoff(
     """
     config = retry_config or RetryConfig()
     attempt = 0
-    last_exception = None
+    last_exception: Optional[Exception] = None
     
     # Get function name safely (handle mocks in tests)
     func_name = getattr(func, "__name__", str(func))
@@ -403,6 +403,10 @@ def retry_with_backoff(
             f"Last error: {last_exception.__class__.__name__}: {str(last_exception)}"
         )
         raise last_exception
+        
+    # This should never happen (we should either return from the try or raise in the if above)
+    # Adding this to satisfy mypy
+    raise RuntimeError("Unexpected error in retry_with_backoff: no result and no exception")
 
 
 def classify_error(

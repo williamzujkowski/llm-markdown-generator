@@ -6,13 +6,13 @@ This module defines plugins that enhance front matter with additional metadata.
 import datetime
 import os
 import platform
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Union
 
 from llm_markdown_generator.plugins import plugin_hook
 
 
 @plugin_hook('front_matter_enhancer', 'add_metadata')
-def add_metadata(front_matter: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+def add_metadata(front_matter: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:
     """Add additional metadata to the front matter.
     
     Enhances the front matter with information such as:
@@ -59,7 +59,7 @@ def add_metadata(front_matter: Dict[str, Any], **kwargs) -> Dict[str, Any]:
 
 
 @plugin_hook('front_matter_enhancer', 'seo_enhancer')
-def seo_enhancer(front_matter: Dict[str, Any], content: str = "", **kwargs) -> Dict[str, Any]:
+def seo_enhancer(front_matter: Dict[str, Any], content: str = "", **kwargs: Any) -> Dict[str, Any]:
     """Enhance front matter with SEO-friendly attributes.
     
     Adds or improves SEO-related front matter fields like:
@@ -122,7 +122,7 @@ def seo_enhancer(front_matter: Dict[str, Any], content: str = "", **kwargs) -> D
 
 
 @plugin_hook('front_matter_enhancer', 'add_series')
-def add_series(front_matter: Dict[str, Any], series_name: str = None, part: int = None, **kwargs) -> Dict[str, Any]:
+def add_series(front_matter: Dict[str, Any], series_name: Optional[str] = None, part: Optional[int] = None, **kwargs: Any) -> Dict[str, Any]:
     """Add blog post series information to front matter.
     
     Enhances the front matter with series information for multi-part blog posts.
@@ -162,7 +162,7 @@ def add_series(front_matter: Dict[str, Any], series_name: str = None, part: int 
 
 
 @plugin_hook('front_matter_enhancer', 'add_readability_stats')
-def add_readability_stats(front_matter: Dict[str, Any], content: str = "", **kwargs) -> Dict[str, Any]:
+def add_readability_stats(front_matter: Dict[str, Any], content: str = "", **kwargs: Any) -> Dict[str, Any]:
     """Add readability statistics to front matter.
     
     Calculates and adds readability metrics to the front matter:

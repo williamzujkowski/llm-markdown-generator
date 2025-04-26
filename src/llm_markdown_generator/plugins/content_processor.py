@@ -4,13 +4,13 @@ This module defines the interface and provides built-in plugins for
 modifying generated content before it is written to the output file.
 """
 
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from llm_markdown_generator.plugins import plugin_hook
 
 
 @plugin_hook('content_processor', 'add_timestamp')
-def add_timestamp(content: str, **kwargs) -> str:
+def add_timestamp(content: str, **kwargs: Any) -> str:
     """Add a timestamp to the content.
     
     Appends a timestamp to the end of the generated content.
@@ -32,7 +32,7 @@ def add_timestamp(content: str, **kwargs) -> str:
 
 
 @plugin_hook('content_processor', 'add_reading_time')
-def add_reading_time(content: str, **kwargs) -> str:
+def add_reading_time(content: str, **kwargs: Any) -> str:
     """Add an estimated reading time to the content.
     
     Calculates and adds an estimated reading time based on word count.
@@ -78,7 +78,7 @@ def add_reading_time(content: str, **kwargs) -> str:
 
 
 @plugin_hook('content_processor', 'add_table_of_contents')
-def add_table_of_contents(content: str, **kwargs) -> str:
+def add_table_of_contents(content: str, **kwargs: Any) -> str:
     """Generate and add a table of contents based on markdown headings.
     
     Scans the markdown content for headings and generates a table of contents
@@ -116,11 +116,13 @@ def add_table_of_contents(content: str, **kwargs) -> str:
         slug = text.lower().replace(' ', '-')
         slug = re.sub(r'[^\w\-]', '', slug)
         
-        headings.append({
-            'level': level,
+        # Use a consistent dictionary with string keys and string values
+        heading_info: Dict[str, str] = {
+            'level': str(level),
             'text': text,
-            'slug': slug
-        })
+            'slug': str(slug)
+        }
+        headings.append(heading_info)
     
     # If no headings, return original content
     if not headings:
@@ -130,7 +132,8 @@ def add_table_of_contents(content: str, **kwargs) -> str:
     toc_lines = ["## Table of Contents", ""]
     for heading in headings:
         # Indent based on heading level
-        indent = "  " * (heading['level'] - 2)
+        level_num = int(heading['level'])
+        indent = "  " * (level_num - 2)
         toc_lines.append(f"{indent}- [{heading['text']}](#{heading['slug']})")
     
     toc = "\n".join(toc_lines) + "\n\n---\n\n"
@@ -146,7 +149,7 @@ def add_table_of_contents(content: str, **kwargs) -> str:
 
 
 @plugin_hook('content_processor', 'add_tag_links')
-def add_tag_links(content: str, base_url: Optional[str] = None, **kwargs) -> str:
+def add_tag_links(content: str, base_url: Optional[str] = None, **kwargs: Any) -> str:
     """Convert tags in front matter to clickable links at the bottom of the content.
     
     Extracts tags from the front matter and adds a list of clickable links at

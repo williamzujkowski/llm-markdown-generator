@@ -33,7 +33,7 @@ from llm_markdown_generator.error_handler import (
 )
 from llm_markdown_generator.front_matter import FrontMatterGenerator
 from llm_markdown_generator.generator import MarkdownGenerator
-from llm_markdown_generator.llm_provider import GeminiProvider, OpenAIProvider, TokenUsage
+from llm_markdown_generator.llm_provider import GeminiProvider, LLMProvider, OpenAIProvider, TokenUsage
 from llm_markdown_generator.prompt_engine import PromptEngine
 from llm_markdown_generator.token_tracker import TokenTracker
 
@@ -107,7 +107,7 @@ def generate(
                 if verbose:
                     console.print(f"Extra parameters: {additional_params}")
             except json.JSONDecodeError:
-                console.print("[red]Error: Invalid JSON in extra parameters[/red]", err=True)
+                console.print("[red]Error: Invalid JSON in extra parameters[/red]", style="red")
                 raise typer.Exit(code=1)
 
         # Set up token tracker
@@ -143,26 +143,22 @@ def generate(
         
         if dry_run:
             # Create a mock LLM provider that doesn't make API calls
-            class MockProvider(OpenAIProvider):
-                def __init__(self, *args, **kwargs):
+            class MockProvider(LLMProvider):
+                def __init__(self, provider_type: str = "mock", model_name: str = "mock-model", *args: Any, **kwargs: Any) -> None:
+                    super().__init__()
                     # For mock provider, set up the environment variable first
                     import os
                     os.environ['MOCK_API_KEY'] = 'mock-key-for-dry-run'
-                    # Call parent init with minimal parameters
-                    super().__init__(
-                        model_name=kwargs.get('model_name', 'mock-model'),
-                        api_key_env_var='MOCK_API_KEY',
-                    )
-                    # Override with mock data
-                    self.mock_model = kwargs.get('model_name', 'mock-model')
-                    self.mock_provider = kwargs.get('provider_type', 'mock')
+                    # Store mock data
+                    self.mock_model = model_name
+                    self.mock_provider = provider_type
                     # Mock token usage
                     self._token_usage = TokenUsage(prompt_tokens=100, completion_tokens=200, 
                                                   total_tokens=300, cost=0.001)
                     self.total_usage = TokenUsage(prompt_tokens=100, completion_tokens=200, 
                                                  total_tokens=300, cost=0.001)
                 
-                def generate_text(self, prompt):
+                def generate_text(self, prompt: str) -> str:
                     """Mock implementation that doesn't make API calls."""
                     console.print("[yellow]DRY RUN: Would call LLM API here[/yellow]")
                     console.print(f"[dim]Provider: {self.mock_provider}, Model: {self.mock_model}[/dim]")
@@ -184,7 +180,7 @@ This is what content would be generated if this were a real API call.
 - Configuration: Using {config_path}
 """
                 
-                def get_token_usage(self):
+                def get_token_usage(self) -> TokenUsage:
                     """Return mock token usage."""
                     return self._token_usage
             
@@ -288,15 +284,15 @@ This is what content would be generated if this were a real API call.
                                     found = True
                                     break
                                 except PluginError as e:
-                                    console.print(f"[yellow]Warning: Error enabling plugin '{plugin_name}': {str(e)}[/yellow]", err=True)
+                                    console.print(f"[yellow]Warning: Error enabling plugin '{plugin_name}': {str(e)}[/yellow]", style="yellow")
                         
                         if not found:
-                            console.print(f"[yellow]Warning: Plugin '{plugin_name}' not found in any category[/yellow]", err=True)
+                            console.print(f"[yellow]Warning: Plugin '{plugin_name}' not found in any category[/yellow]", style="yellow")
                     
                     if enabled_plugins:
                         plugin_info.append(f"Enabled plugins: {', '.join(enabled_plugins)}")
             except Exception as e:
-                console.print(f"[yellow]Warning: Error loading plugins: {str(e)}[/yellow]", err=True)
+                console.print(f"[yellow]Warning: Error loading plugins: {str(e)}[/yellow]", style="yellow")
 
         # Display plugin information if verbose or there's something to report
         if verbose and plugin_info:
@@ -382,33 +378,33 @@ This is what content would be generated if this were a real API call.
                 console.print("\n" + token_tracker.generate_report(detailed=True))
 
     except AuthError as e:
-        console.print(f"[red]Authentication Error:[/red] {str(e)}", err=True)
-        console.print("[yellow]Please check your API key or environment variables.[/yellow]", err=True)
+        console.print(f"[red]Authentication Error:[/red] {str(e)}", style="red")
+        console.print("[yellow]Please check your API key or environment variables.[/yellow]", style="yellow")
         raise typer.Exit(code=1)
         
     except RateLimitError as e:
         retry_msg = f" Try again in {e.retry_after} seconds." if e.retry_after else ""
-        console.print(f"[red]Rate Limit Error:[/red] {str(e)}{retry_msg}", err=True)
-        console.print("[yellow]Consider reducing your request frequency or upgrading your API tier.[/yellow]", err=True)
+        console.print(f"[red]Rate Limit Error:[/red] {str(e)}{retry_msg}", style="red")
+        console.print("[yellow]Consider reducing your request frequency or upgrading your API tier.[/yellow]", style="yellow")
         raise typer.Exit(code=2)
         
     except NetworkError as e:
-        console.print(f"[red]Network Error:[/red] {str(e)}", err=True)
-        console.print("[yellow]Please check your internet connection and try again.[/yellow]", err=True)
+        console.print(f"[red]Network Error:[/red] {str(e)}", style="red")
+        console.print("[yellow]Please check your internet connection and try again.[/yellow]", style="yellow")
         raise typer.Exit(code=3)
         
     except TimeoutError as e:
-        console.print(f"[red]Timeout Error:[/red] {str(e)}", err=True)
-        console.print("[yellow]The request took too long to complete. Please try again later.[/yellow]", err=True)
+        console.print(f"[red]Timeout Error:[/red] {str(e)}", style="red")
+        console.print("[yellow]The request took too long to complete. Please try again later.[/yellow]", style="yellow")
         raise typer.Exit(code=4)
         
     except ServiceUnavailableError as e:
-        console.print(f"[red]Service Unavailable:[/red] {str(e)}", err=True)
-        console.print("[yellow]The LLM service is currently unavailable. Please try again later.[/yellow]", err=True)
+        console.print(f"[red]Service Unavailable:[/red] {str(e)}", style="red")
+        console.print("[yellow]The LLM service is currently unavailable. Please try again later.[/yellow]", style="yellow")
         raise typer.Exit(code=5)
         
     except LLMErrorBase as e:
-        console.print(f"[red]LLM Error:[/red] {str(e)}", err=True)
+        console.print(f"[red]LLM Error:[/red] {str(e)}", style="red")
         if verbose:
             # Add detailed error information in verbose mode
             if hasattr(e, 'category'):
@@ -420,10 +416,10 @@ This is what content would be generated if this were a real API call.
         raise typer.Exit(code=10)
         
     except Exception as e:
-        console.print(f"[red]Unexpected Error:[/red] {str(e)}", err=True)
+        console.print(f"[red]Unexpected Error:[/red] {str(e)}", style="red")
         if verbose:
             import traceback
-            console.print(traceback.format_exc(), err=True)
+            console.print(traceback.format_exc())
         raise typer.Exit(code=99)
 
 
@@ -620,10 +616,12 @@ This is a mock report generated in dry-run mode.
         
         # Create a temporary topic config for security advisory
         topic_name = "security_advisory"
+        # Convert any sequence type to list for TopicConfig
+        keywords = list(custom_params["keywords"]) if "keywords" in custom_params else []
         config.topics[topic_name] = TopicConfig(
             name=topic_name,
             prompt_template="security_advisory.j2",
-            keywords=custom_params["keywords"],
+            keywords=keywords,
             custom_data={}
         )
 
@@ -693,18 +691,18 @@ This is a mock report generated in dry-run mode.
                 console.print("\n" + token_tracker.generate_report(detailed=True))
 
     except AuthError as e:
-        console.print(f"[red]Authentication Error:[/red] {str(e)}")
-        console.print("[yellow]Please check your API key or environment variables.[/yellow]")
+        console.print(f"[red]Authentication Error:[/red] {str(e)}", style="red")
+        console.print("[yellow]Please check your API key or environment variables.[/yellow]", style="yellow")
         raise typer.Exit(code=1)
         
     except RateLimitError as e:
         retry_msg = f" Try again in {e.retry_after} seconds." if e.retry_after else ""
-        console.print(f"[red]Rate Limit Error:[/red] {str(e)}{retry_msg}")
-        console.print("[yellow]Consider reducing your request frequency or upgrading your API tier.[/yellow]")
+        console.print(f"[red]Rate Limit Error:[/red] {str(e)}{retry_msg}", style="red")
+        console.print("[yellow]Consider reducing your request frequency or upgrading your API tier.[/yellow]", style="yellow")
         raise typer.Exit(code=2)
         
     except Exception as e:
-        console.print(f"[red]Error generating CVE report:[/red] {str(e)}")
+        console.print(f"[red]Error generating CVE report:[/red] {str(e)}", style="red")
         if verbose:
             import traceback
             console.print(traceback.format_exc())
@@ -721,7 +719,7 @@ def usage_report(
     try:
         # Check if log file exists
         if not os.path.exists(log_path):
-            console.print(f"[red]Error: Log file not found at {log_path}[/red]", err=True)
+            console.print(f"[red]Error: Log file not found at {log_path}[/red]", style="red")
             raise typer.Exit(code=1)
             
         # Create token tracker and load from log file
@@ -740,7 +738,7 @@ def usage_report(
             console.print(report)
             
     except Exception as e:
-        console.print(f"[red]Error generating usage report:[/red] {str(e)}", err=True)
+        console.print(f"[red]Error generating usage report:[/red] {str(e)}", style="red")
         raise typer.Exit(code=1)
 
 
