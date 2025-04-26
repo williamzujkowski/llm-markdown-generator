@@ -19,12 +19,8 @@ from rich.table import Table
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-# Import Pydantic-based configuration (while maintaining backward compatibility)
-try:
-    from llm_markdown_generator.config_pydantic import Config, load_config, load_front_matter_schema
-except ImportError:
-    # Fall back to dataclass-based configuration if Pydantic is not available
-    from llm_markdown_generator.config import Config, load_config, load_front_matter_schema
+# Import dataclass-based configuration (instead of Pydantic for now - addressing compatibility issues)
+from llm_markdown_generator.config import Config, TopicConfig, load_config, load_front_matter_schema
 
 from llm_markdown_generator.error_handler import (
     AuthError,
@@ -149,6 +145,9 @@ def generate(
             # Create a mock LLM provider that doesn't make API calls
             class MockProvider(OpenAIProvider):
                 def __init__(self, *args, **kwargs):
+                    # For mock provider, set up the environment variable first
+                    import os
+                    os.environ['MOCK_API_KEY'] = 'mock-key-for-dry-run'
                     # Call parent init with minimal parameters
                     super().__init__(
                         model_name=kwargs.get('model_name', 'mock-model'),
@@ -438,9 +437,39 @@ def generate_cve_report(
         None, help="Output directory (overrides the one in config)"
     ),
     title: Optional[str] = typer.Option(None, help="Title for the CVE report"),
+    provider: Optional[str] = typer.Option(
+        None, help="Override the LLM provider (openai or gemini)"
+    ),
+    model: Optional[str] = typer.Option(
+        None, help="Override the model name (e.g., gpt-4o, gemini-2.0-flash)"
+    ),
+    api_key: Optional[str] = typer.Option(
+        None, help="Directly provide an API key instead of using environment variables"
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Display verbose output including token usage"
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Run without actually calling the LLM API or writing files"
+    ),
+    max_retries: int = typer.Option(
+        3, "--retries", "-r", help="Number of retries for API calls"
+    ),
+    retry_delay: float = typer.Option(
+        1.0, "--retry-delay", help="Base delay in seconds between retries"
+    ),
+    token_log_path: Optional[str] = typer.Option(
+        None, "--token-log", help="Path to log token usage (e.g., 'token_usage.jsonl')"
+    ),
+    show_usage_report: bool = typer.Option(
+        False, "--usage-report", help="Show detailed token usage report at the end"
+    ),
 ) -> None:
-    """Generate a markdown report for the specified CVE."""
+    """Generate a comprehensive security advisory for the specified CVE."""
     try:
+        # Set up token tracker
+        token_tracker = TokenTracker(log_path=token_log_path)
+
         # Load configuration
         config = load_config(config_path)
 
@@ -449,26 +478,236 @@ def generate_cve_report(
             config.output_dir = output_dir
 
         # Create output directory if it doesn't exist
-        os.makedirs(config.output_dir, exist_ok=True)
+        if not dry_run:
+            os.makedirs(config.output_dir, exist_ok=True)
+
+        # Load front matter schema
+        front_matter_schema = load_front_matter_schema(config.front_matter.schema_path)
+
+        # Configure retry strategy
+        retry_config = RetryConfig(
+            max_retries=max_retries,
+            base_delay=retry_delay,
+            backoff_factor=2.0,
+            jitter=True
+        )
+        
+        # Determine provider type (with CLI override if provided)
+        llm_provider_type = provider.lower() if provider else config.llm_provider.provider_type.lower()
+
+        # Update model name if provided
+        model_name = model or config.llm_provider.model_name
+        
+        if dry_run:
+            # Create a mock LLM provider that doesn't make API calls
+            class MockProvider(OpenAIProvider):
+                def __init__(self, *args, **kwargs):
+                    # For mock provider, set up the environment variable first
+                    import os
+                    os.environ['MOCK_API_KEY'] = 'mock-key-for-dry-run'
+                    # Call parent init with minimal parameters
+                    super().__init__(
+                        model_name=kwargs.get('model_name', 'mock-model'),
+                        api_key_env_var='MOCK_API_KEY',
+                    )
+                    # Override with mock data
+                    self.mock_model = kwargs.get('model_name', 'mock-model')
+                    self.mock_provider = kwargs.get('provider_type', 'mock')
+                    # Mock token usage
+                    self._token_usage = TokenUsage(prompt_tokens=100, completion_tokens=200, 
+                                                  total_tokens=300, cost=0.001)
+                    self.total_usage = TokenUsage(prompt_tokens=100, completion_tokens=200, 
+                                                 total_tokens=300, cost=0.001)
+                
+                def generate_text(self, prompt):
+                    """Mock implementation that doesn't make API calls."""
+                    console.print("[yellow]DRY RUN: Would call LLM API here[/yellow]")
+                    console.print(f"[dim]Provider: {self.mock_provider}, Model: {self.mock_model}[/dim]")
+                    console.print(f"[dim]Prompt length: {len(prompt)} characters[/dim]")
+                    
+                    return f"""# Security Advisory: {cve_id}
+
+## Executive Summary
+
+This is a mock CVE report for {cve_id}. In a real run, this would contain detailed information about this vulnerability.
+
+## Vulnerability Snapshot
+
+| CVE ID | CVSS Score | EPSS Score | Affected Systems | Patch Status |
+|--------|------------|------------|------------------|--------------|
+| {cve_id} | 9.8 (Critical) | 0.76 (High) | Example Systems | Available |
+
+## Technical Details
+
+This is a mock report generated in dry-run mode.
+
+## Mitigation Steps
+
+1. Update affected systems
+2. Apply security patches
+3. Monitor for suspicious activity
+
+"""
+                
+                def get_token_usage(self):
+                    """Return mock token usage."""
+                    return self._token_usage
+            
+            # Create the mock provider
+            llm_provider = MockProvider(
+                provider_type=llm_provider_type,
+                model_name=model_name
+            )
+            
+            console.print(f"[yellow]DRY RUN: Using mock provider ({llm_provider_type})[/yellow]")
+        else:
+            # Create the actual LLM provider
+            if llm_provider_type == "openai":
+                llm_provider = OpenAIProvider(
+                    model_name=model_name,
+                    api_key_env_var=config.llm_provider.api_key_env_var,
+                    temperature=config.llm_provider.temperature,
+                    max_tokens=config.llm_provider.max_tokens,
+                    additional_params=config.llm_provider.additional_params,
+                    retry_config=retry_config,
+                )
+            elif llm_provider_type == "gemini":
+                # For Gemini, prefer direct API key if provided, otherwise use env var
+                if api_key:
+                    llm_provider = GeminiProvider(
+                        model_name=model_name,
+                        api_key=api_key,
+                        temperature=config.llm_provider.temperature,
+                        max_tokens=config.llm_provider.max_tokens,
+                        additional_params=config.llm_provider.additional_params,
+                        retry_config=retry_config,
+                    )
+                else:
+                    llm_provider = GeminiProvider(
+                        model_name=model_name,
+                        api_key_env_var=config.llm_provider.api_key_env_var,
+                        temperature=config.llm_provider.temperature,
+                        max_tokens=config.llm_provider.max_tokens,
+                        additional_params=config.llm_provider.additional_params,
+                        retry_config=retry_config,
+                    )
+            else:
+                raise LLMErrorBase(f"Unsupported LLM provider type: {llm_provider_type}")
+
+        # Create prompt engine
+        templates_dir = Path(".llmconfig/prompt-templates")
+        prompt_engine = PromptEngine(str(templates_dir))
+
+        # Create front matter generator
+        front_matter_generator = FrontMatterGenerator(front_matter_schema)
 
         # Create markdown generator
         generator = MarkdownGenerator(
             config=config,
-            llm_provider=None,  # No LLM provider needed for CVE report
-            prompt_engine=None,  # No prompt engine needed for CVE report
-            front_matter_generator=None,  # No front matter needed for CVE report
+            llm_provider=llm_provider,
+            prompt_engine=prompt_engine,
+            front_matter_generator=front_matter_generator,
+        )
+        
+        # Prepare custom parameters
+        report_title = title or f"Security Advisory: {cve_id} - Critical Vulnerability Report"
+        custom_params = {
+            "topic": cve_id,
+            "title": report_title,
+            "audience": "security professionals and IT administrators",
+            "keywords": ["cybersecurity", "vulnerability", "CVSS", "EPSS", "mitigation", "remediation", cve_id],
+        }
+        
+        # Create a temporary topic config for security advisory
+        topic_name = "security_advisory"
+        config.topics[topic_name] = TopicConfig(
+            name=topic_name,
+            prompt_template="security_advisory.j2",
+            keywords=custom_params["keywords"],
+            custom_data={}
         )
 
-        # Generate CVE report
-        report_content = generator.generate_cve_report(cve_id)
+        # Generate content
+        with console.status(f"Generating CVE report for: [bold]{cve_id}[/bold] using [bold]{llm_provider_type}/{model_name}[/bold]..."):
+            start_time = datetime.now()
+            content = generator.generate_content(topic_name, custom_params)
+            end_time = datetime.now()
+            generation_time = (end_time - start_time).total_seconds()
 
-        # Write report to file
-        report_title = title or f"Report for {cve_id}"
-        output_path = generator.write_to_file(report_content, title=report_title)
-        console.print(f"[green]CVE report written to:[/green] {output_path}")
+        # Get token usage information
+        token_usage = llm_provider.get_token_usage()
+        
+        # Record token usage
+        token_tracker.record_usage(
+            token_usage=token_usage,
+            provider=llm_provider_type,
+            model=model_name,
+            operation="generate_cve_report",
+            topic=cve_id,
+            metadata={
+                "title": report_title,
+                "generation_time": generation_time,
+                "dry_run": dry_run
+            }
+        )
+        
+        if dry_run:
+            console.print("[yellow]DRY RUN: Would write content to file[/yellow]")
+            # Print a preview of the content
+            content_preview = content.split("\n\n")[0] + "\n..."
+            console.print(f"[dim]Content preview:[/dim]\n{content_preview}")
+        else:
+            # Write to file
+            output_path = generator.write_to_file(content, title=report_title)
+            console.print(f"[green]CVE report written to:[/green] {output_path}")
+        
+        # Show token usage details
+        tokens_table = Table(title="Token Usage Information")
+        tokens_table.add_column("Metric", style="cyan")
+        tokens_table.add_column("Value", style="green")
+        
+        tokens_table.add_row("Provider", llm_provider_type)
+        tokens_table.add_row("Model", model_name)
+        tokens_table.add_row("Prompt tokens", str(token_usage.prompt_tokens))
+        tokens_table.add_row("Completion tokens", str(token_usage.completion_tokens))
+        tokens_table.add_row("Total tokens", str(token_usage.total_tokens))
+        
+        if token_usage.cost is not None:
+            tokens_table.add_row("Estimated cost", f"${token_usage.cost:.6f}")
+        
+        tokens_table.add_row("Generation time", f"{generation_time:.2f} seconds")
+        
+        if verbose or show_usage_report:
+            console.print(tokens_table)
+            
+            # Show accumulated usage
+            total_usage = token_tracker.get_total_usage()
+            console.print("\n[bold]Session Token Usage:[/bold]")
+            console.print(f"  Total operations: {len(token_tracker.records)}")
+            console.print(f"  Total tokens: {total_usage.total_tokens}")
+            if total_usage.cost is not None:
+                console.print(f"  Total cost: ${total_usage.cost:.6f}")
+            
+            # Display detailed usage report if requested
+            if show_usage_report:
+                console.print("\n" + token_tracker.generate_report(detailed=True))
 
+    except AuthError as e:
+        console.print(f"[red]Authentication Error:[/red] {str(e)}")
+        console.print("[yellow]Please check your API key or environment variables.[/yellow]")
+        raise typer.Exit(code=1)
+        
+    except RateLimitError as e:
+        retry_msg = f" Try again in {e.retry_after} seconds." if e.retry_after else ""
+        console.print(f"[red]Rate Limit Error:[/red] {str(e)}{retry_msg}")
+        console.print("[yellow]Consider reducing your request frequency or upgrading your API tier.[/yellow]")
+        raise typer.Exit(code=2)
+        
     except Exception as e:
-        console.print(f"[red]Error generating CVE report:[/red] {str(e)}", err=True)
+        console.print(f"[red]Error generating CVE report:[/red] {str(e)}")
+        if verbose:
+            import traceback
+            console.print(traceback.format_exc())
         raise typer.Exit(code=1)
 
 

@@ -77,19 +77,24 @@ llm-markdown python --title "Python Classes" --token-log "token_usage.jsonl" --u
 
 # Run in dry-run mode (no API calls, no file writes)
 llm-markdown python --title "Python Testing" --dry-run --verbose
+
+# Generate a security advisory for a specific CVE
+llm-markdown generate-cve-report CVE-2023-1234 --title "Critical Remote Code Execution Vulnerability"
 ```
 
 ### CLI Options
 
 ```
-Usage: llm-markdown [OPTIONS] TOPIC
+Usage: llm-markdown [OPTIONS] COMMAND [ARGS]...
 
 Generate markdown blog posts using LLMs
 
-Arguments:
-  TOPIC  The topic to generate content for  [required]
+Commands:
+  generate              Generate a markdown blog post for the specified topic.
+  generate-cve-report   Generate a comprehensive security advisory for the specified CVE.
+  usage-report          Generate a token usage report from a log file.
 
-Options:
+Options for generate command:
   --config-path TEXT              Path to the configuration file  [default: config/config.yaml]
   --output-dir TEXT               Output directory (overrides the one in config)
   --title TEXT                    Title for the generated post
@@ -187,6 +192,32 @@ def my_custom_enhancer(front_matter: dict, **kwargs) -> dict:
 ```
 
 Save these in a Python file, place it in a directory, and use the `--plugins-dir` option to load them.
+
+## 🔒 Security Advisories & CVE Reports 
+
+The framework provides specialized capabilities for generating security content:
+
+```bash
+# Generate a security advisory for a specific CVE
+llm-markdown generate-cve-report CVE-2023-45678 
+
+# Add a custom title for the report
+llm-markdown generate-cve-report CVE-2023-45678 --title "Critical Authentication Bypass Vulnerability"
+
+# Save to a specific directory
+llm-markdown generate-cve-report CVE-2023-45678 --output-dir "security/advisories"
+
+# Use specific provider and model
+llm-markdown generate-cve-report CVE-2023-45678 --provider openai --model gpt-4o
+```
+
+The generated CVE reports include:
+- Executive summary of the vulnerability
+- Vulnerability snapshot with CVSS score, EPSS score, and affected systems
+- Technical details and exploit information
+- Comprehensive mitigation steps
+- References to official advisories
+- Industry impact analysis
 
 ## 📊 Token Usage Tracking
 

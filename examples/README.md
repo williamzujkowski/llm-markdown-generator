@@ -57,7 +57,7 @@ This directory contains example scripts demonstrating various features and use c
 
 ### 5. Security Report Generation
 
-- **File**: `generate_security_report.py`
+- **Files**: `generate_security_report.py`, `generate_cve_report.py`
 - **Description**: Demonstrates how to generate daily CVE reports and security advisories for high-risk vulnerabilities.
 - **Run Example**:
   ```bash
@@ -75,6 +75,12 @@ This directory contains example scripts demonstrating various features and use c
   
   # Generate and save to a specific output directory
   python examples/generate_security_report.py daily_cve_report today --output-dir "security/reports"
+  
+  # Using the CLI command to generate a CVE report (simpler approach)
+  python examples/generate_cve_report.py CVE-2023-12345
+  
+  # Using the CLI command with additional options
+  python -m llm_markdown_generator.cli generate-cve-report CVE-2023-12345 --provider openai --model gpt-4o --output-dir "security/advisories"
   ```
 
 ## Running the Examples

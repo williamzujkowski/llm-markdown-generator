@@ -11,7 +11,6 @@ from llm_markdown_generator.config import Config, TopicConfig
 from llm_markdown_generator.front_matter import FrontMatterGenerator, slugify
 from llm_markdown_generator.llm_provider import LLMProvider, TokenUsage
 from llm_markdown_generator.prompt_engine import PromptEngine
-from llm_markdown_generator.generate_cve_report import generate_cve_report
 
 
 class GeneratorError(Exception):
@@ -281,24 +280,3 @@ class MarkdownGenerator:
         except Exception as e:
             raise GeneratorError(f"Error writing content to file: {str(e)}")
 
-    def generate_cve_report(self, cve_id: str) -> str:
-        """Generate a markdown report for a specific CVE.
-
-        Args:
-            cve_id: The CVE identifier (e.g., CVE-2024-45410)
-
-        Returns:
-            str: The generated markdown report.
-        """
-        report_content = f"# Security Report for {cve_id}\n\n"
-        report_content += f"**Date:** {datetime.datetime.now().strftime('%Y-%m-%d')}\n\n"
-        report_content += f"## Overview\n\n"
-        report_content += f"The CVE {cve_id} is a vulnerability that affects certain systems.\n\n"
-        report_content += f"## Details\n\n"
-        report_content += f"More information about the vulnerability can be found on the official CVE website.\n\n"
-        report_content += f"## Recommendations\n\n"
-        report_content += f"1. Update your systems to the latest version.\n"
-        report_content += f"2. Apply security patches as soon as they are available.\n"
-        report_content += f"3. Monitor your systems for any unusual activity.\n"
-
-        return report_content
