@@ -429,6 +429,50 @@ This is what content would be generated if this were a real API call.
 
 
 @app.command()
+def generate_cve_report(
+    cve_id: str = typer.Argument(..., help="The CVE identifier (e.g., CVE-2024-45410)"),
+    config_path: str = typer.Option(
+        "config/config.yaml", help="Path to the configuration file"
+    ),
+    output_dir: Optional[str] = typer.Option(
+        None, help="Output directory (overrides the one in config)"
+    ),
+    title: Optional[str] = typer.Option(None, help="Title for the CVE report"),
+) -> None:
+    """Generate a markdown report for the specified CVE."""
+    try:
+        # Load configuration
+        config = load_config(config_path)
+
+        # Override output directory if provided
+        if output_dir:
+            config.output_dir = output_dir
+
+        # Create output directory if it doesn't exist
+        os.makedirs(config.output_dir, exist_ok=True)
+
+        # Create markdown generator
+        generator = MarkdownGenerator(
+            config=config,
+            llm_provider=None,  # No LLM provider needed for CVE report
+            prompt_engine=None,  # No prompt engine needed for CVE report
+            front_matter_generator=None,  # No front matter needed for CVE report
+        )
+
+        # Generate CVE report
+        report_content = generator.generate_cve_report(cve_id)
+
+        # Write report to file
+        report_title = title or f"Report for {cve_id}"
+        output_path = generator.write_to_file(report_content, title=report_title)
+        console.print(f"[green]CVE report written to:[/green] {output_path}")
+
+    except Exception as e:
+        console.print(f"[red]Error generating CVE report:[/red] {str(e)}", err=True)
+        raise typer.Exit(code=1)
+
+
+@app.command()
 def usage_report(
     log_path: str = typer.Argument(..., help="Path to the token usage log file"),
     detailed: bool = typer.Option(False, "--detailed", "-d", help="Show detailed usage records"),
