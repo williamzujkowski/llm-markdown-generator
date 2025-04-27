@@ -323,19 +323,30 @@ def generate(
                                     break
                                 except PluginError as e:
                                     console.print(f"[yellow]Warning: Error enabling plugin '{plugin_name}': {str(e)}[/yellow]", style="yellow")
-                        
+
                         if not found:
                             console.print(f"[yellow]Warning: Plugin '{plugin_name}' not found in any category[/yellow]", style="yellow")
-                    
-                    if enabled_plugins:
-                        plugin_info.append(f"Enabled plugins: {', '.join(enabled_plugins)}")
+
+                    # Update plugin_info based on actually registered plugins for verbose output
+                    plugin_info = [] # Reset info list
+                    if generator._front_matter_enhancers:
+                        enhancer_names = [getattr(f, '__name__', str(f)) for f in generator._front_matter_enhancers]
+                        plugin_info.append(f"Enabled Enhancers: {', '.join(enhancer_names)}")
+                    if generator._content_processors:
+                        processor_names = [getattr(f, '__name__', str(f)) for f in generator._content_processors]
+                        plugin_info.append(f"Enabled Processors: {', '.join(processor_names)}")
+
             except Exception as e:
                 console.print(f"[yellow]Warning: Error loading plugins: {str(e)}[/yellow]", style="yellow")
 
-        # Display plugin information if verbose or there's something to report
-        if verbose and plugin_info:
-            for info in plugin_info:
-                console.print(f"[blue]{info}[/blue]")
+        # Display plugin information if verbose
+        if verbose:
+            console.print("[blue]Plugin Loading Report:[/blue]")
+            if not plugin_info:
+                console.print("  No plugins loaded or enabled.")
+            else:
+                for info in plugin_info:
+                    console.print(f"  {info}")
 
         # Prepare custom parameters
         custom_params: Dict[str, Any] = {}
@@ -509,12 +520,27 @@ def generate_cve_report(
         plugin_info = []
         try:
             plugin_counts = generator.load_plugins()
-            for category, count in plugin_counts.items():
-                if count > 0:
-                    plugin_info.append(f"Loaded {count} {category} plugins")
-            if verbose and plugin_info:
-                for info in plugin_info:
-                    console.print(f"[blue]{info}[/blue]")
+            plugin_counts = generator.load_plugins()
+            if verbose:
+                console.print("[blue]Plugin Loading Report:[/blue]")
+                if not any(plugin_counts.values()):
+                     console.print("  No plugins loaded.")
+                else:
+                    # List Enhancers
+                    if generator._front_matter_enhancers:
+                        console.print("  [bold]Front Matter Enhancers:[/bold]")
+                        for plugin_func in generator._front_matter_enhancers:
+                            console.print(f"    - {getattr(plugin_func, '__name__', str(plugin_func))}")
+                    else:
+                        console.print("  No front matter enhancers loaded.")
+
+                    # List Processors
+                    if generator._content_processors:
+                        console.print("  [bold]Content Processors:[/bold]")
+                        for plugin_func in generator._content_processors:
+                            console.print(f"    - {getattr(plugin_func, '__name__', str(plugin_func))}")
+                    else:
+                         console.print("  No content processors loaded.")
         except Exception as e:
             console.print(f"[yellow]Warning: Error loading plugins: {str(e)}[/yellow]", style="yellow")
 

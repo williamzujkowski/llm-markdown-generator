@@ -77,7 +77,7 @@ Provide a clear, concise overview of the vulnerability, its severity, exploitati
 {% endif %}
 
 **JSON Fields:**
-Populate the other fields in the JSON object (like `title`, `tags`, `author`, `publishDate`, `description`) based on the generated content and the input parameters (e.g., use `{{ title }}` for the JSON title field). Ensure `tags` includes `{{ topic }}`.
+Populate the other fields in the JSON object (like `title`, `tags`, `author`, `publishDate`, `description`, `category`) based on the generated content and the input parameters (e.g., use `{{ title }}` for the JSON title field, set `category` to 'Security' or similar). Ensure `tags` includes `{{ topic }}`.
 
 **Example Markdown Style (for `content_body`):**
 Match the style, level of detail, and format of this example CVE report section:
