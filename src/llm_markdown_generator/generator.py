@@ -193,13 +193,8 @@ class MarkdownGenerator:
             # 1. Define Pydantic Output Parser
             parser = PydanticOutputParser(pydantic_object=GeneratedPost)
 
-            # 2. Load Prompt Template Content from File
-            # Determine the template file name
-            template_filename = prompt_template_override or topic_config.prompt_template
-            if not template_filename:
-                 raise GeneratorError(f"No prompt template specified for topic '{topic_name}' and no override provided.")
-
-            # 3. Prepare Prompt Context / Input for the template rendering
+            # 2. Prepare Prompt Context / Input for the template rendering
+            # Note: template_filename was already determined earlier in the function
             prompt_context = {
                 "topic": custom_params.get("topic", topic_name), # Use specific topic if provided (e.g., CVE ID)
                 # Use keywords from custom_params first, then topic_config (if exists), then empty list
