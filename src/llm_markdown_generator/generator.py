@@ -62,6 +62,7 @@ class MarkdownGenerator:
         self.config = config
         self.llm_model = llm_model
         self.front_matter_generator = front_matter_generator
+        self.dry_run = False # Initialize dry_run flag
 
         # Initialize plugin registry
         self._content_processors = []
@@ -168,25 +169,21 @@ class MarkdownGenerator:
             # 1. Define Pydantic Output Parser
             parser = PydanticOutputParser(pydantic_object=GeneratedPost)
 
-            # 2. Create Prompt Template
-            # TODO: Load template content from topic_config.prompt_template file
-            # For now, using a placeholder template string.
-            # The template MUST include format instructions from the parser.
-            prompt_template_str = """
-Generate a blog post about the topic: {topic}
+            # 2. Load Prompt Template Content from File
+            # Templates are expected in '.llmconfig/prompt-templates/' relative to project root
+            template_file_path = Path(".llmconfig/prompt-templates") / topic_config.prompt_template
+            if not template_file_path.exists():
+                raise GeneratorError(f"Prompt template file not found: {template_file_path}")
 
-Focus on the following keywords: {keywords}
-Audience: {audience}
+            try:
+                prompt_template_str = template_file_path.read_text(encoding="utf-8")
+            except Exception as e:
+                raise GeneratorError(f"Error reading prompt template file {template_file_path}: {e}")
 
-Please structure your response as a JSON object matching the following schema:
-{format_instructions}
-
-Ensure the 'content_body' field contains the full markdown content of the post.
-Use the provided title if available: {title}
-"""
+            # Create LangChain PromptTemplate, ensuring format instructions are included
             prompt = ChatPromptTemplate.from_template(
-                prompt_template_str,
-                partial_variables={"format_instructions": parser.get_format_instructions()}
+                template=prompt_template_str,
+                partial_variables={"format_instructions": parser.get_format_instructions()},
             )
 
             # 3. Prepare Prompt Context / Input for the Chain
