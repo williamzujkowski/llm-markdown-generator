@@ -718,13 +718,31 @@ def enhanced_cve_report(
         # This will extract details from the content and add them to front matter
         try:
             # Load all available plugins (including the CVE enhancer if present)
-            plugins_loaded = markdown_generator.load_plugins()
-            
+            plugin_counts = markdown_generator.load_plugins()
+
             if verbose:
-                console.print(f"[blue]Loaded plugins: {plugins_loaded}[/blue]")
-                
+                console.print("[blue]Plugin Loading Report:[/blue]")
+                if not any(plugin_counts.values()):
+                     console.print("  No plugins loaded.")
+                else:
+                    # List Enhancers
+                    if markdown_generator._front_matter_enhancers:
+                        console.print("  [bold]Front Matter Enhancers:[/bold]")
+                        for plugin_func in markdown_generator._front_matter_enhancers:
+                            console.print(f"    - {getattr(plugin_func, '__name__', str(plugin_func))}")
+                    else:
+                        console.print("  No front matter enhancers loaded.")
+
+                    # List Processors
+                    if markdown_generator._content_processors:
+                        console.print("  [bold]Content Processors:[/bold]")
+                        for plugin_func in markdown_generator._content_processors:
+                            console.print(f"    - {getattr(plugin_func, '__name__', str(plugin_func))}")
+                    else:
+                         console.print("  No content processors loaded.")
+
         except Exception as e:
-            console.print(f"[yellow]Warning: Could not load CVE enhancer plugin: {str(e)}[/yellow]")
+            console.print(f"[yellow]Warning: Error during plugin loading: {str(e)}[/yellow]")
         
         # Prepare default title if not provided
         if not title:
