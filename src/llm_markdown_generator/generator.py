@@ -4,6 +4,7 @@ Combines front matter and LLM-generated content into a final markdown file.
 """
 
 import datetime
+import json # Added import
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
