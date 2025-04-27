@@ -144,11 +144,18 @@ class MarkdownGenerator:
                 
         return plugins_loaded
 
-    def generate_content(self, topic_name: str, custom_params: Dict[str, Any] = None) -> str:
+    def generate_content(
+        self,
+        topic_name: str,
+        custom_params: Dict[str, Any] = None,
+        prompt_template_override: Optional[str] = None
+    ) -> str:
         """Generate markdown content for a specific topic.
 
         Args:
-            topic_name: The name of the topic to generate content for.
+            topic_name: The name of the topic to generate content for (used for config lookup if no override).
+            custom_params: Optional custom parameters to include in the prompt context.
+            prompt_template_override: Optional name of the prompt template file to use instead of the one from topic config.
             custom_params: Optional custom parameters to include in the prompt context.
 
         Returns:
@@ -171,8 +178,13 @@ class MarkdownGenerator:
             parser = PydanticOutputParser(pydantic_object=GeneratedPost)
 
             # 2. Load Prompt Template Content from File
+            # Determine the template file name
+            template_filename = prompt_template_override or topic_config.prompt_template
+            if not template_filename:
+                 raise GeneratorError(f"No prompt template specified for topic '{topic_name}' and no override provided.")
+
             # Templates are expected in '.llmconfig/prompt-templates/' relative to project root
-            template_file_path = Path(".llmconfig/prompt-templates") / topic_config.prompt_template
+            template_file_path = Path(".llmconfig/prompt-templates") / template_filename
             if not template_file_path.exists():
                 raise GeneratorError(f"Prompt template file not found: {template_file_path}")
 
@@ -293,13 +305,20 @@ class MarkdownGenerator:
     
 # Token tracking functionality has been removed
 
-    def write_to_file(self, content: str, filename: Optional[str] = None, title: Optional[str] = None) -> str:
+    def write_to_file(
+        self,
+        content: str,
+        filename: Optional[str] = None,
+        title: Optional[str] = None,
+        output_dir_override: Optional[str] = None
+    ) -> str:
         """Write generated content to a file.
 
         Args:
             content: The markdown content to write.
-            filename: Optional custom filename (without extension).
-            title: Optional title to use for generating the filename if not provided.
+            filename: Optional custom filename (without extension). If provided, it's used directly.
+            title: Optional title to use for generating the filename if `filename` is not provided.
+            output_dir_override: Optional path to override the default output directory from config.
 
         Returns:
             str: The path to the written file.
@@ -308,10 +327,11 @@ class MarkdownGenerator:
             GeneratorError: If there is an error writing the file.
         """
         try:
-            output_dir = Path(self.config.output_dir)
-            output_dir.mkdir(parents=True, exist_ok=True)
+            # Determine output directory
+            output_dir_path = Path(output_dir_override) if output_dir_override else Path(self.config.output_dir)
+            output_dir_path.mkdir(parents=True, exist_ok=True)
 
-            # Determine filename
+            # Determine filename (use provided filename directly if available)
             if not filename:
                 if title:
                     filename = slugify(title)

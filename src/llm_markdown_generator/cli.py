@@ -13,7 +13,6 @@ from typing import Any, Dict, List, Optional
 import typer
 from dotenv import load_dotenv
 from rich.console import Console
-from rich.table import Table
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -99,6 +98,69 @@ This is what content would be generated if this were a real API call.
 - Topic: {self.topic}
 """
 
+# --- Helper Function for Provider Creation ---
+
+def _create_llm_provider(
+    config: Config,
+    dry_run: bool,
+    provider_override: Optional[str],
+    model_override: Optional[str],
+    api_key_override: Optional[str],
+    retry_config: RetryConfig,
+    additional_params: Dict[str, Any],
+    topic_for_mock: str = "generic" # Used by MockProvider
+) -> LLMProvider:
+    """Creates the appropriate LLM provider instance based on config and CLI args."""
+
+    llm_provider_type = provider_override.lower() if provider_override else config.llm_provider.provider_type.lower()
+    model_name = model_override or config.llm_provider.model_name
+
+    if dry_run:
+        provider = MockProvider(
+            provider_type=llm_provider_type,
+            model_name=model_name,
+            topic=topic_for_mock
+        )
+        console.print(f"[yellow]DRY RUN: Using mock provider ({llm_provider_type})[/yellow]")
+        return provider
+
+    # Combine config params and CLI extra params
+    final_additional_params = {**config.llm_provider.additional_params, **additional_params}
+
+    if llm_provider_type == "openai":
+        # Resolve API key: CLI override > environment variable
+        api_key = api_key_override or os.getenv(config.llm_provider.api_key_env_var)
+        if not api_key:
+             raise AuthError(f"OpenAI API key not found. Set the {config.llm_provider.api_key_env_var} environment variable or use --api-key.")
+
+        provider = OpenAIProvider(
+            model_name=model_name,
+            api_key=api_key, # Pass the resolved key directly
+            temperature=config.llm_provider.temperature,
+            max_tokens=config.llm_provider.max_tokens,
+            additional_params=final_additional_params,
+            retry_config=retry_config,
+        )
+    elif llm_provider_type == "gemini":
+        # Resolve API key: CLI override > environment variable
+        api_key = api_key_override or os.getenv(config.llm_provider.api_key_env_var)
+        if not api_key:
+            raise AuthError(f"Gemini API key not found. Set the {config.llm_provider.api_key_env_var} environment variable or use --api-key.")
+
+        provider = GeminiProvider(
+            model_name=model_name,
+            api_key=api_key, # Pass the resolved key directly
+            temperature=config.llm_provider.temperature,
+            max_tokens=config.llm_provider.max_tokens,
+            additional_params=final_additional_params,
+            retry_config=retry_config,
+        )
+    else:
+        raise LLMErrorBase(f"Unsupported LLM provider type: {llm_provider_type}")
+
+    return provider
+
+
 # --- CLI Commands ---
 
 @app.command()
@@ -182,54 +244,21 @@ def generate(
             backoff_factor=2.0,
             jitter=True
         )
-        
-        # Determine provider type (with CLI override if provided)
-        llm_provider_type = provider.lower() if provider else config.llm_provider.provider_type.lower()
 
-        # Update model name if provided
+        # Create LLM provider using the helper function
+        llm_provider = _create_llm_provider(
+            config=config,
+            dry_run=dry_run,
+            provider_override=provider,
+            model_override=model,
+            api_key_override=api_key,
+            retry_config=retry_config,
+            additional_params=additional_params,
+            topic_for_mock=topic # Pass topic for mock provider context
+        )
+        # Get provider type and model name for logging/status messages
+        llm_provider_type = provider.lower() if provider else config.llm_provider.provider_type.lower()
         model_name = model or config.llm_provider.model_name
-        
-        if dry_run:
-            # Use the shared MockProvider for dry runs
-            llm_provider = MockProvider(
-                provider_type=llm_provider_type,
-                model_name=model_name,
-                topic=topic # Pass topic for better mock response
-            )
-            console.print(f"[yellow]DRY RUN: Using mock provider ({llm_provider_type})[/yellow]")
-        else:
-            # Create the actual LLM provider
-            if llm_provider_type == "openai":
-                llm_provider = OpenAIProvider(
-                    model_name=model_name,
-                    api_key_env_var=config.llm_provider.api_key_env_var,
-                    temperature=config.llm_provider.temperature,
-                    max_tokens=config.llm_provider.max_tokens,
-                    additional_params={**config.llm_provider.additional_params, **additional_params},
-                    retry_config=retry_config,
-                )
-            elif llm_provider_type == "gemini":
-                # For Gemini, prefer direct API key if provided, otherwise use env var
-                if api_key:
-                    llm_provider = GeminiProvider(
-                        model_name=model_name,
-                        api_key=api_key,
-                        temperature=config.llm_provider.temperature,
-                        max_tokens=config.llm_provider.max_tokens,
-                        additional_params={**config.llm_provider.additional_params, **additional_params},
-                        retry_config=retry_config,
-                    )
-                else:
-                    llm_provider = GeminiProvider(
-                        model_name=model_name,
-                        api_key_env_var=config.llm_provider.api_key_env_var,
-                        temperature=config.llm_provider.temperature,
-                        max_tokens=config.llm_provider.max_tokens,
-                        additional_params={**config.llm_provider.additional_params, **additional_params},
-                        retry_config=retry_config,
-                    )
-            else:
-                raise LLMErrorBase(f"Unsupported LLM provider type: {llm_provider_type}")
 
         # Create prompt engine
         # Assume templates are in .llmconfig/prompt-templates/
@@ -441,55 +470,22 @@ def generate_cve_report(
             backoff_factor=2.0,
             jitter=True
         )
-        
-        # Determine provider type (with CLI override if provided)
-        llm_provider_type = provider.lower() if provider else config.llm_provider.provider_type.lower()
 
-        # Update model name if provided
+        # Create LLM provider using the helper function
+        # Pass the first CVE ID as context for the mock provider if in dry run mode
+        llm_provider = _create_llm_provider(
+            config=config,
+            dry_run=dry_run,
+            provider_override=provider,
+            model_override=model,
+            api_key_override=api_key,
+            retry_config=retry_config,
+            additional_params={}, # No --extra params for this command yet
+            topic_for_mock=cve_ids[0] if cve_ids else "cve-report"
+        )
+        # Get provider type and model name for logging/status messages
+        llm_provider_type = provider.lower() if provider else config.llm_provider.provider_type.lower()
         model_name = model or config.llm_provider.model_name
-        
-        if dry_run:
-            # Use the shared MockProvider for dry runs
-            # We pass the first CVE ID as the 'topic' for the mock response generator
-            llm_provider = MockProvider(
-                provider_type=llm_provider_type,
-                model_name=model_name,
-                topic=cve_ids[0] if cve_ids else "cve-report" # Use first CVE for mock context
-            )
-            console.print(f"[yellow]DRY RUN: Using mock provider ({llm_provider_type})[/yellow]")
-        else:
-            # Create the actual LLM provider
-            if llm_provider_type == "openai":
-                llm_provider = OpenAIProvider(
-                    model_name=model_name,
-                    api_key_env_var=config.llm_provider.api_key_env_var,
-                    temperature=config.llm_provider.temperature,
-                    max_tokens=config.llm_provider.max_tokens,
-                    additional_params=config.llm_provider.additional_params,
-                    retry_config=retry_config,
-                )
-            elif llm_provider_type == "gemini":
-                # For Gemini, prefer direct API key if provided, otherwise use env var
-                if api_key:
-                    llm_provider = GeminiProvider(
-                        model_name=model_name,
-                        api_key=api_key,
-                        temperature=config.llm_provider.temperature,
-                        max_tokens=config.llm_provider.max_tokens,
-                        additional_params=config.llm_provider.additional_params,
-                        retry_config=retry_config,
-                    )
-                else:
-                    llm_provider = GeminiProvider(
-                        model_name=model_name,
-                        api_key_env_var=config.llm_provider.api_key_env_var,
-                        temperature=config.llm_provider.temperature,
-                        max_tokens=config.llm_provider.max_tokens,
-                        additional_params=config.llm_provider.additional_params,
-                        retry_config=retry_config,
-                    )
-            else:
-                raise LLMErrorBase(f"Unsupported LLM provider type: {llm_provider_type}")
 
         # Create prompt engine
         templates_dir = Path(".llmconfig/prompt-templates")
@@ -528,21 +524,20 @@ def generate_cve_report(
                 "audience": "security professionals and IT administrators",
                 "keywords": ["cybersecurity", "vulnerability", "CVSS", "EPSS", "mitigation", "remediation", cve_id],
             }
-            
-            # Update topic config for this CVE
-            keywords = list(custom_params["keywords"]) if "keywords" in custom_params else []
-            config.topics[topic_name] = TopicConfig(
-                name=topic_name,
-                prompt_template="security_advisory.j2",
-                keywords=keywords,
-                custom_data={}
-            )
-            
+
+            # Define the prompt template to use
+            prompt_template_name = "security_advisory.j2"
+
             try:
-                # Generate content for this CVE
+                # Generate content for this CVE using the specific template
                 with console.status(f"Generating report for: [bold]{cve_id}[/bold] using [bold]{llm_provider_type}/{model_name}[/bold]..."):
                     start_time = datetime.now()
-                    content = generator.generate_content(topic_name, custom_params)
+                    # Pass template name directly, avoid modifying config.topics
+                    content = generator.generate_content(
+                        topic_name=topic_name, # Still used for context/logging within generator
+                        custom_params=custom_params,
+                        prompt_template_override=prompt_template_name
+                    )
                     end_time = datetime.now()
                     generation_time = (end_time - start_time).total_seconds()
                 
@@ -666,54 +661,21 @@ def enhanced_cve_report(
             backoff_factor=2.0,
             jitter=True
         )
-        
-        # Determine provider type (with CLI override if provided)
-        llm_provider_type = provider.lower() if provider else config.llm_provider.provider_type.lower()
 
-        # Update model name if provided
+        # Create LLM provider using the helper function
+        llm_provider = _create_llm_provider(
+            config=config,
+            dry_run=dry_run,
+            provider_override=provider,
+            model_override=model,
+            api_key_override=api_key,
+            retry_config=retry_config,
+            additional_params={}, # No --extra params for this command yet
+            topic_for_mock=cve_id # Pass CVE ID for mock provider context
+        )
+        # Get provider type and model name for logging/status messages
+        llm_provider_type = provider.lower() if provider else config.llm_provider.provider_type.lower()
         model_name = model or config.llm_provider.model_name
-        
-        if dry_run:
-            # Use the shared MockProvider for dry runs
-            llm_provider = MockProvider(
-                provider_type=llm_provider_type,
-                model_name=model_name,
-                topic=cve_id # Pass CVE ID as topic for mock response
-            )
-            console.print(f"[yellow]DRY RUN: Using mock provider ({llm_provider_type})[/yellow]")
-        else:
-            # Create the actual LLM provider with token tracker
-            if llm_provider_type == "openai":
-                llm_provider = OpenAIProvider(
-                    model_name=model_name,
-                    api_key_env_var=config.llm_provider.api_key_env_var,
-                    temperature=config.llm_provider.temperature,
-                    max_tokens=config.llm_provider.max_tokens,
-                    additional_params=config.llm_provider.additional_params,
-                    retry_config=retry_config,
-                )
-            elif llm_provider_type == "gemini":
-                # For Gemini, prefer direct API key if provided, otherwise use env var
-                if api_key:
-                    llm_provider = GeminiProvider(
-                        model_name=model_name,
-                        api_key=api_key,
-                        temperature=config.llm_provider.temperature,
-                        max_tokens=config.llm_provider.max_tokens,
-                        additional_params=config.llm_provider.additional_params,
-                        retry_config=retry_config,
-                    )
-                else:
-                    llm_provider = GeminiProvider(
-                        model_name=model_name,
-                        api_key_env_var=config.llm_provider.api_key_env_var,
-                        temperature=config.llm_provider.temperature,
-                        max_tokens=config.llm_provider.max_tokens,
-                        additional_params=config.llm_provider.additional_params,
-                        retry_config=retry_config,
-                    )
-            else:
-                raise LLMErrorBase(f"Unsupported LLM provider type: {llm_provider_type}")
 
         # Create prompt engine with default template location
         templates_dir = ".llmconfig/prompt-templates"  # Default location for templates
@@ -776,15 +738,13 @@ def enhanced_cve_report(
         
         # Update the config with security_advisory topic if not present
         if "security_advisory" not in config.topics:
-            config.topics["security_advisory"] = TopicConfig(
-                name="security_advisory",
-                prompt_template="security_advisory.j2",
-                keywords=custom_params["keywords"]
-            )
-        
+
+        # Define the prompt template to use
+        prompt_template_name = "security_advisory.j2"
+
         # Display prompt if verbose
         if verbose:
-            console.print("\n[blue]Prompt Template:[/blue] security_advisory.j2")
+            console.print(f"\n[blue]Prompt Template:[/blue] {prompt_template_name}")
             console.print(f"[blue]CVE ID:[/blue] {cve_id}")
             console.print(f"[blue]Front Matter Schema:[/blue] {front_matter_schema}")
         
@@ -792,11 +752,13 @@ def enhanced_cve_report(
         with console.status(f"Generating vulnerability report for [bold]{cve_id}[/bold] using [bold]{llm_provider_type}/{model_name}[/bold]..."):
             start_time = datetime.now()
             
-            # Generate the content
+            # Generate the content using the specific template
             try:
+                # Pass template name directly, avoid modifying config.topics
                 markdown_content = markdown_generator.generate_content(
-                    topic_name="security_advisory",
-                    custom_params=custom_params
+                    topic_name="security_advisory", # Still used for context/logging
+                    custom_params=custom_params,
+                    prompt_template_override=prompt_template_name
                 )
                 end_time = datetime.now()
                 generation_time = (end_time - start_time).total_seconds()
@@ -820,12 +782,15 @@ def enhanced_cve_report(
             content_preview = "\n".join(markdown_content.split("\n")[:20]) + "\n..."
             console.print(f"[dim]Content preview:[/dim]\n{content_preview}")
         else:
-            # Write content to file
-            output_path = output_dir_path / filename
-            with open(output_path, "w") as f:
-                f.write(markdown_content)
+            # Write content to file using the generator's method
+            # Pass the desired filename (without path) and the base output directory
+            output_path = markdown_generator.write_to_file(
+                content=markdown_content,
+                filename=filename, # Just the filename, generator handles path joining
+                output_dir_override=str(output_dir_path) # Pass the specific output dir
+            )
             console.print(f"[green]Report written to:[/green] {output_path}")
-        
+
         # Display generation time
         if verbose:
             console.print(f"Generation time: {generation_time:.2f} seconds")
