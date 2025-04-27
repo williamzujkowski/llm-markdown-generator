@@ -49,6 +49,7 @@ class MarkdownGenerator:
         self,
         config: Config,
         llm_provider: Optional[LLMProvider], # Use our custom provider type
+        prompt_engine: 'PromptEngine', # Add prompt_engine parameter
         front_matter_generator: FrontMatterGenerator,
     ) -> None:
         """Initialize the markdown generator.
@@ -56,10 +57,12 @@ class MarkdownGenerator:
         Args:
             config: The main configuration object.
             llm_provider: The LLM provider instance (e.g., OpenAIProvider, GeminiProvider).
+            prompt_engine: The PromptEngine instance for rendering templates.
             front_matter_generator: The generator for front matter.
         """
         self.config = config
         self.llm_provider = llm_provider # Use consistent naming
+        self.prompt_engine = prompt_engine # Store the prompt engine
         self.front_matter_generator = front_matter_generator
         self.dry_run = False # Initialize dry_run flag
 
@@ -183,20 +186,6 @@ class MarkdownGenerator:
             if not template_filename:
                  raise GeneratorError(f"No prompt template specified for topic '{topic_name}' and no override provided.")
 
-            # Templates are expected in '.llmconfig/prompt-templates/' relative to project root
-            template_file_path = Path(".llmconfig/prompt-templates") / template_filename
-            if not template_file_path.exists():
-                raise GeneratorError(f"Prompt template file not found: {template_file_path}")
-
-            try:
-                prompt_template_str = template_file_path.read_text(encoding="utf-8")
-            except Exception as e:
-                raise GeneratorError(f"Error reading prompt template file {template_file_path}: {e}")
-
-            # Create LangChain PromptTemplate object (still useful for formatting)
-            # Note: We are NOT including format_instructions here, it needs to be in the template file itself.
-            prompt_template = ChatPromptTemplate.from_template(template=prompt_template_str)
-
             # 3. Prepare Prompt Context / Input for the template rendering
             prompt_context = {
                 "topic": custom_params.get("topic", topic_name), # Use specific topic if provided (e.g., CVE ID)
@@ -206,15 +195,14 @@ class MarkdownGenerator:
                 **topic_config.custom_data,
                 **custom_params, # Allow overriding any context via custom_params
             }
+            # Add format instructions to the context for the prompt engine
+            prompt_context["format_instructions"] = parser.get_format_instructions()
 
-            # 4. Render the prompt string
-            # Use format_map for simple substitution, as ChatPromptTemplate expects ChatMessage objects for full rendering
-            rendered_prompt = prompt_template.template.format_map(prompt_context)
-            # Add format instructions manually if they weren't part of the context
-            # (They should be in the template file now, but double-check)
-            if "{format_instructions}" in rendered_prompt:
-                 rendered_prompt = rendered_prompt.replace("{format_instructions}", parser.get_format_instructions())
-
+            # 4. Render the prompt string using the PromptEngine
+            try:
+                rendered_prompt = self.prompt_engine.render_prompt(template_filename, prompt_context)
+            except Exception as e:
+                 raise GeneratorError(f"Error rendering prompt template '{template_filename}': {e}")
 
             # 5. Call the LLM Provider (or simulate for dry run)
             if self.dry_run:

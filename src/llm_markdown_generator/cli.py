@@ -275,10 +275,10 @@ def generate(
         generator = MarkdownGenerator(
             config=config,
             llm_provider=llm_provider,
-            prompt_engine=prompt_engine,
+            prompt_engine=prompt_engine, # Pass the created prompt engine
             front_matter_generator=front_matter_generator,
         )
-        
+
         # Handle plugin loading
         plugin_info = []
         if not no_plugins:
@@ -501,7 +501,7 @@ def generate_cve_report(
         generator = MarkdownGenerator(
             config=config,
             llm_provider=llm_provider,
-            prompt_engine=prompt_engine,
+            prompt_engine=prompt_engine, # Pass the created prompt engine
             front_matter_generator=front_matter_generator,
         )
 
@@ -704,10 +704,10 @@ def enhanced_cve_report(
         markdown_generator = MarkdownGenerator(
             config=config,
             llm_provider=llm_provider,
-            prompt_engine=prompt_engine,
+            prompt_engine=prompt_engine, # Pass the created prompt engine
             front_matter_generator=front_matter_generator
         )
-        
+
         # Ensure our CVE front matter enhancer plugin is loaded
         # This will extract details from the content and add them to front matter
         try:
