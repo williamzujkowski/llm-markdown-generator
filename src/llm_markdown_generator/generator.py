@@ -26,15 +26,19 @@ class GeneratorError(Exception):
 
 
 # Define a Pydantic model for the structured output (front matter + content)
-# This should ideally align with the front_matter_schema, but defined explicitly here
+# Align this more closely with common front matter needs and potential schema fields
 class GeneratedPost(BaseModel):
     """Pydantic model for the generated post structure."""
     title: str = Field(description="The main title of the blog post.")
-    tags: List[str] = Field(default_factory=list, description="Relevant tags for the post.")
-    category: Optional[str] = Field(None, description="The primary category of the post.")
-    # Add other common front matter fields as needed based on schema
+    slug: Optional[str] = Field(None, description="URL-friendly slug for the post (optional, can be generated later).")
     author: Optional[str] = Field(None, description="Author of the post.")
     publishDate: Optional[str] = Field(None, description="Date the post was published (YYYY-MM-DD).")
+    tags: List[str] = Field(default_factory=list, description="Relevant tags for the post.")
+    category: Optional[str] = Field(None, description="The primary category of the post.")
+    description: Optional[str] = Field(None, description="A short summary/description for the post.")
+    # Add other common fields as needed
+    # Example: featuredImage: Optional[str] = Field(None, description="Path to a featured image.")
+
     # The main content body
     content_body: str = Field(description="The full markdown content body of the blog post.")
 
@@ -62,7 +66,11 @@ class MarkdownGenerator:
         # Initialize plugin registry
         self._content_processors = []
         self._front_matter_enhancers = []
-        
+
+    def set_dry_run(self, dry_run: bool) -> None:
+        """Set the dry run mode."""
+        self.dry_run = dry_run
+
     def register_content_processor(self, processor_func) -> None:
         """Register a content processor plugin.
         
@@ -194,12 +202,28 @@ Use the provided title if available: {title}
             # 4. Create the LCEL Chain
             chain: Runnable[Dict, GeneratedPost] = prompt | self.llm_model | parser
 
-            # 5. Invoke the Chain
-            # LangChain handles retries, API calls, and parsing based on model/parser setup
-            generated_data: GeneratedPost = chain.invoke(prompt_input)
+            # 5. Invoke the Chain (or simulate for dry run)
+            if self.dry_run:
+                print("[yellow]DRY RUN: Skipping LLM chain invocation.[/yellow]")
+                # Create mock GeneratedPost data for dry run
+                generated_data = GeneratedPost(
+                    title=custom_params.get("title", f"Mock Title for {topic_name}"),
+                    tags=custom_params.get("keywords", topic_config.keywords),
+                    category=topic_name,
+                    author="Dry Run Author",
+                    publishDate=datetime.datetime.now().strftime("%Y-%m-%d"),
+                    description="This is a mock description generated during a dry run.",
+                    content_body=f"# Mock Content for {topic_name}\n\nThis content is generated because the `--dry-run` flag was used.\n\nPrompt Input:\n```json\n{json.dumps(prompt_input, indent=2)}\n```"
+                )
+            elif self.llm_model is None:
+                 raise GeneratorError("LLM model not initialized. Cannot generate content.")
+            else:
+                # LangChain handles retries, API calls, and parsing based on model/parser setup
+                generated_data: GeneratedPost = chain.invoke(prompt_input)
 
-            # 6. Prepare Front Matter Data (using the parsed Pydantic object)
-            # Apply front matter enhancer plugins (pass the Pydantic object)
+
+            # 6. Prepare Front Matter Data (using the parsed or mock Pydantic object)
+            # Apply front matter enhancer plugins
             front_matter_pydantic = generated_data # Start with the parsed data
             content_body = generated_data.content_body # Extract content body
 

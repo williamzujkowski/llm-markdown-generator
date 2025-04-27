@@ -208,13 +208,14 @@ This is what content would be generated if this were a real API call.
         front_matter_generator = FrontMatterGenerator(front_matter_schema)
 
         # Create markdown generator with the LangChain model
-        # Note: PromptEngine is removed from the generator's dependencies
         generator = MarkdownGenerator(
             config=config,
             llm_model=llm_model, # Pass the instantiated LangChain model
             front_matter_generator=front_matter_generator,
         )
-        
+        # Set dry run mode on the generator instance
+        generator.set_dry_run(dry_run)
+
         # Handle plugin loading
         plugin_info = []
         if not no_plugins:
@@ -520,13 +521,14 @@ This vulnerability allows attackers to gain unauthorized access to affected syst
         front_matter_generator = FrontMatterGenerator(front_matter_schema)
 
         # Create markdown generator with the LangChain model
-        # Note: PromptEngine is removed from the generator's dependencies
         generator = MarkdownGenerator(
             config=config,
             llm_model=llm_model, # Pass the instantiated LangChain model
             front_matter_generator=front_matter_generator,
         )
-        
+        # Set dry run mode on the generator instance
+        generator.set_dry_run(dry_run)
+
         # Set up the temporary topic config for security advisory
         topic_name = "security_advisory"
         
@@ -801,13 +803,14 @@ The severity of the impact is compounded by the fact that the application is oft
         front_matter_generator = FrontMatterGenerator(schema=cve_schema) # Use the correct schema
 
         # Create markdown generator with the LangChain model
-        # Note: PromptEngine is removed from the generator's dependencies
         markdown_generator = MarkdownGenerator(
             config=config,
             llm_model=llm_model, # Pass the instantiated LangChain model
             front_matter_generator=front_matter_generator
         )
-        
+        # Set dry run mode on the generator instance
+        markdown_generator.set_dry_run(dry_run)
+
         # Ensure our CVE front matter enhancer plugin is loaded
         # This will extract details from the content and add them to front matter
         try:
