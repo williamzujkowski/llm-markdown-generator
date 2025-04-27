@@ -31,9 +31,15 @@ from llm_markdown_generator.error_handler import (
     ServiceUnavailableError,
     TimeoutError
 )
+# LangChain components
+from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.language_models.chat_models import BaseChatModel
+
 from llm_markdown_generator.front_matter import FrontMatterGenerator
 from llm_markdown_generator.generator import MarkdownGenerator
-from llm_markdown_generator.llm_provider import GeminiProvider, LLMProvider, OpenAIProvider
+# LLMProvider, OpenAIProvider, GeminiProvider are removed
+# PromptEngine is removed (will be removed later if still present)
 
 # Create a Rich console for prettier output
 console = Console()
@@ -164,60 +170,48 @@ This is what content would be generated if this were a real API call.
 - Configuration: Using {config_path}
 """
             
-            # Create the mock provider
-            llm_provider = MockProvider(
-                provider_type=llm_provider_type,
-                model_name=model_name
-            )
-            
-            console.print(f"[yellow]DRY RUN: Using mock provider ({llm_provider_type})[/yellow]")
+            # TODO: Implement a proper LangChain mock for dry runs if needed.
+            # For now, dry run will skip LLM instantiation.
+            # The MockProvider class defined above might need adjustment for LangChain.
+            llm_model = None # Placeholder for dry run
+            console.print(f"[yellow]DRY RUN: Skipping LLM instantiation[/yellow]")
         else:
-            # Create the actual LLM provider
+            # Create the actual LangChain ChatModel
+            llm_model: Optional[BaseChatModel] = None
+            model_kwargs = {
+                "model": model_name, # Use 'model' for Google, 'model_name' for OpenAI
+                "temperature": config.llm_provider.temperature,
+                **{k: v for k, v in config.llm_provider.additional_params.items()}, # Add base params from config
+                **{k: v for k, v in additional_params.items()} # Add CLI extra params
+            }
+            if config.llm_provider.max_tokens:
+                 model_kwargs["max_tokens"] = config.llm_provider.max_tokens # Common param name
+
             if llm_provider_type == "openai":
-                llm_provider = OpenAIProvider(
-                    model_name=model_name,
-                    api_key_env_var=config.llm_provider.api_key_env_var,
-                    temperature=config.llm_provider.temperature,
-                    max_tokens=config.llm_provider.max_tokens,
-                    additional_params={**config.llm_provider.additional_params, **additional_params},
-                    retry_config=retry_config,
-                )
+                # OpenAI uses model_name, LangChain handles API key via env var OPENAI_API_KEY
+                 model_kwargs["model_name"] = model_kwargs.pop("model") # Rename key
+                 if api_key: # Allow direct API key override
+                     model_kwargs["api_key"] = api_key
+                 llm_model = ChatOpenAI(**model_kwargs)
+                 console.print(f"Using LangChain OpenAI model: {model_name}")
+
             elif llm_provider_type == "gemini":
-                # For Gemini, prefer direct API key if provided, otherwise use env var
-                if api_key:
-                    llm_provider = GeminiProvider(
-                        model_name=model_name,
-                        api_key=api_key,
-                        temperature=config.llm_provider.temperature,
-                        max_tokens=config.llm_provider.max_tokens,
-                        additional_params={**config.llm_provider.additional_params, **additional_params},
-                        retry_config=retry_config,
-                    )
-                else:
-                    llm_provider = GeminiProvider(
-                        model_name=model_name,
-                        api_key_env_var=config.llm_provider.api_key_env_var,
-                        temperature=config.llm_provider.temperature,
-                        max_tokens=config.llm_provider.max_tokens,
-                        additional_params={**config.llm_provider.additional_params, **additional_params},
-                        retry_config=retry_config,
-                    )
+                 # Google uses model, LangChain handles API key via env var GOOGLE_API_KEY or direct param
+                 if api_key: # Allow direct API key override
+                     model_kwargs["google_api_key"] = api_key
+                 llm_model = ChatGoogleGenerativeAI(**model_kwargs)
+                 console.print(f"Using LangChain Google Gemini model: {model_name}")
             else:
                 raise LLMErrorBase(f"Unsupported LLM provider type: {llm_provider_type}")
 
-        # Create prompt engine
-        # Assume templates are in .llmconfig/prompt-templates/
-        templates_dir = Path(".llmconfig/prompt-templates")
-        prompt_engine = PromptEngine(str(templates_dir))
-
-        # Create front matter generator
+        # Front matter generator (will be updated later to use Pydantic)
         front_matter_generator = FrontMatterGenerator(front_matter_schema)
 
-        # Create markdown generator
+        # Create markdown generator with the LangChain model
+        # Note: PromptEngine is removed from the generator's dependencies
         generator = MarkdownGenerator(
             config=config,
-            llm_provider=llm_provider,
-            prompt_engine=prompt_engine,
+            llm_model=llm_model, # Pass the instantiated LangChain model
             front_matter_generator=front_matter_generator,
         )
         
@@ -491,59 +485,45 @@ This vulnerability allows attackers to gain unauthorized access to affected syst
 - [Security Researcher Blog](https://example.com/security/blog)
 """
             
-            # Create the mock provider
-            llm_provider = MockProvider(
-                provider_type=llm_provider_type,
-                model_name=model_name
-            )
-            
-            console.print(f"[yellow]DRY RUN: Using mock provider ({llm_provider_type})[/yellow]")
+            # TODO: Implement a proper LangChain mock for dry runs if needed.
+            # The MockProvider class defined above might need adjustment for LangChain.
+            llm_model = None # Placeholder for dry run
+            console.print(f"[yellow]DRY RUN: Skipping LLM instantiation[/yellow]")
         else:
-            # Create the actual LLM provider
+             # Create the actual LangChain ChatModel
+            llm_model: Optional[BaseChatModel] = None
+            model_kwargs = {
+                "model": model_name, # Use 'model' for Google, 'model_name' for OpenAI
+                "temperature": config.llm_provider.temperature,
+                **{k: v for k, v in config.llm_provider.additional_params.items()}, # Add base params from config
+                # No additional CLI params for this command yet
+            }
+            if config.llm_provider.max_tokens:
+                 model_kwargs["max_tokens"] = config.llm_provider.max_tokens # Common param name
+
             if llm_provider_type == "openai":
-                llm_provider = OpenAIProvider(
-                    model_name=model_name,
-                    api_key_env_var=config.llm_provider.api_key_env_var,
-                    temperature=config.llm_provider.temperature,
-                    max_tokens=config.llm_provider.max_tokens,
-                    additional_params=config.llm_provider.additional_params,
-                    retry_config=retry_config,
-                )
+                 model_kwargs["model_name"] = model_kwargs.pop("model") # Rename key
+                 if api_key: # Allow direct API key override
+                     model_kwargs["api_key"] = api_key
+                 llm_model = ChatOpenAI(**model_kwargs)
+                 console.print(f"Using LangChain OpenAI model: {model_name}")
+
             elif llm_provider_type == "gemini":
-                # For Gemini, prefer direct API key if provided, otherwise use env var
-                if api_key:
-                    llm_provider = GeminiProvider(
-                        model_name=model_name,
-                        api_key=api_key,
-                        temperature=config.llm_provider.temperature,
-                        max_tokens=config.llm_provider.max_tokens,
-                        additional_params=config.llm_provider.additional_params,
-                        retry_config=retry_config,
-                    )
-                else:
-                    llm_provider = GeminiProvider(
-                        model_name=model_name,
-                        api_key_env_var=config.llm_provider.api_key_env_var,
-                        temperature=config.llm_provider.temperature,
-                        max_tokens=config.llm_provider.max_tokens,
-                        additional_params=config.llm_provider.additional_params,
-                        retry_config=retry_config,
-                    )
+                 if api_key: # Allow direct API key override
+                     model_kwargs["google_api_key"] = api_key
+                 llm_model = ChatGoogleGenerativeAI(**model_kwargs)
+                 console.print(f"Using LangChain Google Gemini model: {model_name}")
             else:
                 raise LLMErrorBase(f"Unsupported LLM provider type: {llm_provider_type}")
 
-        # Create prompt engine
-        templates_dir = Path(".llmconfig/prompt-templates")
-        prompt_engine = PromptEngine(str(templates_dir))
-
-        # Create front matter generator
+        # Front matter generator (will be updated later to use Pydantic)
         front_matter_generator = FrontMatterGenerator(front_matter_schema)
 
-        # Create markdown generator
+        # Create markdown generator with the LangChain model
+        # Note: PromptEngine is removed from the generator's dependencies
         generator = MarkdownGenerator(
             config=config,
-            llm_provider=llm_provider,
-            prompt_engine=prompt_engine,
+            llm_model=llm_model, # Pass the instantiated LangChain model
             front_matter_generator=front_matter_generator,
         )
         
@@ -786,56 +766,45 @@ The severity of the impact is compounded by the fact that the application is oft
 - [Snort Rules for {cve_id}](https://examplecorp.com/security-resources/snort-rules) (Fictional example)
 """
             
-            # Create the mock provider
-            llm_provider = MockProvider(
-                provider_type=llm_provider_type,
-                model_name=model_name
-            )
-            
-            console.print(f"[yellow]DRY RUN: Using mock provider ({llm_provider_type})[/yellow]")
+            # TODO: Implement a proper LangChain mock for dry runs if needed.
+            # The MockProvider class defined above might need adjustment for LangChain.
+            llm_model = None # Placeholder for dry run
+            console.print(f"[yellow]DRY RUN: Skipping LLM instantiation[/yellow]")
         else:
-            # Create the actual LLM provider with token tracker
+            # Create the actual LangChain ChatModel
+            llm_model: Optional[BaseChatModel] = None
+            model_kwargs = {
+                "model": model_name, # Use 'model' for Google, 'model_name' for OpenAI
+                "temperature": config.llm_provider.temperature,
+                **{k: v for k, v in config.llm_provider.additional_params.items()}, # Add base params from config
+                # No additional CLI params for this command yet
+            }
+            if config.llm_provider.max_tokens:
+                 model_kwargs["max_tokens"] = config.llm_provider.max_tokens # Common param name
+
             if llm_provider_type == "openai":
-                llm_provider = OpenAIProvider(
-                    model_name=model_name,
-                    api_key_env_var=config.llm_provider.api_key_env_var,
-                    temperature=config.llm_provider.temperature,
-                    max_tokens=config.llm_provider.max_tokens,
-                    additional_params=config.llm_provider.additional_params,
-                    retry_config=retry_config,
-                )
+                 model_kwargs["model_name"] = model_kwargs.pop("model") # Rename key
+                 if api_key: # Allow direct API key override
+                     model_kwargs["api_key"] = api_key
+                 llm_model = ChatOpenAI(**model_kwargs)
+                 console.print(f"Using LangChain OpenAI model: {model_name}")
+
             elif llm_provider_type == "gemini":
-                # For Gemini, prefer direct API key if provided, otherwise use env var
-                if api_key:
-                    llm_provider = GeminiProvider(
-                        model_name=model_name,
-                        api_key=api_key,
-                        temperature=config.llm_provider.temperature,
-                        max_tokens=config.llm_provider.max_tokens,
-                        additional_params=config.llm_provider.additional_params,
-                        retry_config=retry_config,
-                    )
-                else:
-                    llm_provider = GeminiProvider(
-                        model_name=model_name,
-                        api_key_env_var=config.llm_provider.api_key_env_var,
-                        temperature=config.llm_provider.temperature,
-                        max_tokens=config.llm_provider.max_tokens,
-                        additional_params=config.llm_provider.additional_params,
-                        retry_config=retry_config,
-                    )
+                 if api_key: # Allow direct API key override
+                     model_kwargs["google_api_key"] = api_key
+                 llm_model = ChatGoogleGenerativeAI(**model_kwargs)
+                 console.print(f"Using LangChain Google Gemini model: {model_name}")
             else:
                 raise LLMErrorBase(f"Unsupported LLM provider type: {llm_provider_type}")
 
-        # Create prompt engine with default template location
-        templates_dir = ".llmconfig/prompt-templates"  # Default location for templates
-        prompt_engine = PromptEngine(templates_dir=templates_dir)
-        
-        # Create markdown generator
+        # Front matter generator (will be updated later to use Pydantic)
+        front_matter_generator = FrontMatterGenerator(schema=cve_schema) # Use the correct schema
+
+        # Create markdown generator with the LangChain model
+        # Note: PromptEngine is removed from the generator's dependencies
         markdown_generator = MarkdownGenerator(
             config=config,
-            llm_provider=llm_provider,
-            prompt_engine=prompt_engine,
+            llm_model=llm_model, # Pass the instantiated LangChain model
             front_matter_generator=front_matter_generator
         )
         
