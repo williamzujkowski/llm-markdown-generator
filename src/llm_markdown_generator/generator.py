@@ -17,6 +17,7 @@ from langchain_core.prompts import ChatPromptTemplate # Keep for template format
 from llm_markdown_generator.config import Config, TopicConfig
 from llm_markdown_generator.front_matter import FrontMatterGenerator, slugify
 from llm_markdown_generator.llm_provider import LLMProvider # Import the base provider class
+from llm_markdown_generator.prompt_engine import PromptEngine # Import PromptEngine
 
 
 class GeneratorError(Exception):
