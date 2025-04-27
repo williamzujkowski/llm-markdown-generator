@@ -504,10 +504,22 @@ def generate_cve_report(
             prompt_engine=prompt_engine,
             front_matter_generator=front_matter_generator,
         )
-        
+
+        # Load plugins (similar to the 'generate' command)
+        plugin_info = []
+        try:
+            plugin_counts = generator.load_plugins()
+            for category, count in plugin_counts.items():
+                if count > 0:
+                    plugin_info.append(f"Loaded {count} {category} plugins")
+            if verbose and plugin_info:
+                for info in plugin_info:
+                    console.print(f"[blue]{info}[/blue]")
+        except Exception as e:
+            console.print(f"[yellow]Warning: Error loading plugins: {str(e)}[/yellow]", style="yellow")
+
         # Set up the temporary topic config for security advisory
         topic_name = "security_advisory"
-        
         # Create a report for each CVE ID
         successful_reports = []
         failed_reports = []
@@ -550,11 +562,15 @@ def generate_cve_report(
                     content_preview = "\n".join(content.split("\n")[:10]) + "\n..."
                     console.print(f"[dim]Content preview:[/dim]\n{content_preview}")
                 else:
-                    # Write to file with CVE-specific filename
-                    output_path = generator.write_to_file(content, title=f"{cve_id.lower()}-vulnerability-report")
+                    # Write to file with CVE-specific filename using the 'filename' argument
+                    report_filename = f"{cve_id.lower()}.md"
+                    output_path = generator.write_to_file(
+                        content=content,
+                        filename=report_filename,
+                        output_dir_override=config.output_dir # Pass the potentially overridden output dir
+                    )
                     console.print(f"[green]Report written to:[/green] {output_path}")
                     successful_reports.append({"cve_id": cve_id, "path": output_path})
-                
                 # Show generation time for this CVE if verbose
                 if verbose:
                     console.print(f"Generation time: {generation_time:.2f} seconds")
