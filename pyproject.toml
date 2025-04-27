@@ -44,7 +44,14 @@ dev = [
 ]
 
 [project.scripts]
-llm-markdown = "llm_markdown_generator.cli:main"
+# Point to the typer app in new-cli.py (assuming the file is moved/renamed appropriately later)
+# For now, assuming new-cli.py is run directly or via a wrapper.
+# If new-cli.py is intended as the main entry point, it needs adjustment
+# or this needs to point to a function within it that runs the typer app.
+# Example if new-cli.py is moved to src/llm_markdown_generator/new_cli.py:
+# llm-markdown = "llm_markdown_generator.new_cli:app"
+# For now, commenting out the old entry point. A proper entry point needs setup.
+# llm-markdown = "llm_markdown_generator.cli:main" # Old entry point
 
 [tool.setuptools]
 package-dir = {"" = "src"}
