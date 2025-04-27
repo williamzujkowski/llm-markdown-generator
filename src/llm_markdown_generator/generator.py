@@ -29,7 +29,7 @@ class GeneratorError(Exception):
 class GeneratedPost(BaseModel):
     """Pydantic model for the generated post structure."""
     title: str = Field(description="The main title of the blog post.")
-    slug: Optional[str] = Field(None, description="URL-friendly slug for the post (optional, can be generated later).")
+    # slug: Optional[str] = Field(None, description="URL-friendly slug for the post (optional, can be generated later).") # Slug generated later
     author: Optional[str] = Field(None, description="Author of the post.")
     publishDate: Optional[str] = Field(None, description="Date the post was published (YYYY-MM-DD).")
     tags: List[str] = Field(default_factory=list, description="Relevant tags for the post.")
@@ -242,73 +242,84 @@ class MarkdownGenerator:
                     raise GeneratorError(f"Failed to parse LLM response into Pydantic model: {parse_error}\nLLM Response:\n{llm_response_text}")
 
 
-            # 6. Prepare Front Matter Data (using the parsed or mock Pydantic object)
-            # Apply front matter enhancer plugins
-            front_matter_pydantic = generated_data # Start with the parsed data
-            content_body = generated_data.content_body # Extract content body
+            # 6. Apply Front Matter Enhancer Plugins
+            # Enhancers operate on the Pydantic model before YAML generation
+            enhanced_front_matter_data = generated_data # Start with the parsed/mock data
+            content_body = generated_data.content_body # Keep content body separate for now
 
             for enhancer in self._front_matter_enhancers:
                 try:
+                    # Prepare kwargs for the plugin, passing the Pydantic model and content
                     plugin_name = getattr(enhancer, "__name__", str(enhancer))
-                    plugin_params = {k: v for k, v in custom_params.items()
-                                     if k not in ('topic', 'front_matter', 'content')} # Avoid conflicts
+                    plugin_kwargs = {
+                        "front_matter": enhanced_front_matter_data, # Pass the current Pydantic model
+                        "content": content_body, # Pass the raw content body
+                        "topic": topic_name,
+                        **custom_params # Pass all custom params
+                    }
 
-                    # Pass the Pydantic object and content body to enhancers
-                    # Enhancers might need updating to expect a Pydantic model
-                    enhanced_data = enhancer(
-                        front_matter=front_matter_pydantic, # Pass Pydantic model
-                        content=content_body,
-                        topic=topic_name,
-                        **plugin_params
-                    )
+                    # Call the enhancer plugin
+                    result = enhancer(**plugin_kwargs)
 
                     # Update front matter data if enhancer returns a valid Pydantic model
-                    if enhanced_data and isinstance(enhanced_data, BaseModel):
-                         # Ensure it's the correct type or compatible
-                         if isinstance(enhanced_data, GeneratedPost):
-                             front_matter_pydantic = enhanced_data
-                         else:
-                             # Attempt to update fields if it's a different Pydantic model
-                             try:
-                                 update_dict = enhanced_data.model_dump(exclude_unset=True)
-                                 front_matter_pydantic = GeneratedPost(**{**front_matter_pydantic.model_dump(), **update_dict})
-                             except Exception as update_err:
-                                 print(f"Warning: Could not merge enhanced data from plugin {plugin_name}: {update_err}")
-                    elif enhanced_data:
-                         print(f"Warning: Enhancer plugin {plugin_name} did not return a Pydantic model. Skipping update.")
+                    if result and isinstance(result, GeneratedPost):
+                        enhanced_front_matter_data = result # Replace with the enhanced version
+                    elif result:
+                         # Attempt to update fields if it's a different Pydantic model or dict
+                         try:
+                             if isinstance(result, BaseModel):
+                                 update_dict = result.model_dump(exclude_unset=True)
+                             elif isinstance(result, dict):
+                                 update_dict = result
+                             else:
+                                 update_dict = None
+                                 print(f"Warning: Enhancer plugin {plugin_name} returned unexpected type {type(result)}. Skipping update.")
+
+                             if update_dict:
+                                 # Create a new model instance with updated fields
+                                 current_dict = enhanced_front_matter_data.model_dump()
+                                 current_dict.update(update_dict)
+                                 enhanced_front_matter_data = GeneratedPost(**current_dict)
+
+                         except Exception as update_err:
+                             print(f"Warning: Could not merge enhanced data from plugin {plugin_name}: {update_err}")
 
                 except Exception as e:
                     print(f"Error in front matter enhancer plugin {plugin_name}: {str(e)}")
 
-            # 7. Generate YAML Front Matter from the Pydantic object
-            front_matter_yaml = self.front_matter_generator.generate(front_matter_pydantic)
 
-            # 8. Combine Front Matter and Content Body
-            full_content = f"{front_matter_yaml}\n{content_body}" # Use extracted content body
+            # 7. Generate YAML Front Matter from the *final* Pydantic object
+            front_matter_yaml = self.front_matter_generator.generate(enhanced_front_matter_data)
 
-            # 9. Apply content processor plugins
+            # 8. Combine Final Front Matter and Content Body
+            full_content = f"{front_matter_yaml}\n{content_body}" # Use original content body
+
+            # 9. Apply Content Processor Plugins to the *combined* content string
+            processed_content = full_content
             for processor in self._content_processors:
                 try:
-                    if hasattr(processor, "__name__"):
-                        plugin_name = processor.__name__
-                    else:
-                        plugin_name = getattr(processor, "__name__", str(processor))
+                    # Prepare kwargs for the plugin
+                    plugin_name = getattr(processor, "__name__", str(processor))
+                    plugin_kwargs = {
+                        "content": processed_content, # Pass the current combined content string
+                        "topic": topic_name,
+                        "front_matter_data": enhanced_front_matter_data, # Pass the final Pydantic model
+                        **custom_params # Pass all custom params
+                    }
 
-                    # Create plugin params excluding any that would conflict
-                    plugin_params = {k: v for k, v in custom_params.items()
-                                     if k not in ('topic', 'content', 'front_matter_data')}
+                    # Call the processor plugin
+                    result = processor(**plugin_kwargs)
 
-                    # Pass the Pydantic model containing front matter data
-                    full_content = processor(
-                        content=full_content, # Pass the combined content
-                        topic=topic_name,
-                        front_matter_data=front_matter_pydantic, # Pass Pydantic model
-                        **plugin_params
-                    )
+                    # Update content if processor returns a string
+                    if isinstance(result, str):
+                        processed_content = result
+                    elif result is not None:
+                        print(f"Warning: Content processor plugin {plugin_name} did not return a string. Skipping update.")
+
                 except Exception as e:
                     print(f"Error in content processor plugin {plugin_name}: {str(e)}")
 
-            return full_content
+            return processed_content # Return the final processed content
 
         except Exception as e:
             raise GeneratorError(f"Error generating content for topic '{topic_name}': {str(e)}")

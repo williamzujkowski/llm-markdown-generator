@@ -59,30 +59,33 @@ class MockProvider(LLMProvider):
         console.print(f"[dim]Provider: {self.mock_provider}, Model: {self.mock_model}[/dim]")
         console.print(f"[dim]Prompt length: {len(prompt)} characters[/dim]")
 
-        # Generate a slightly more specific mock response based on topic/prompt
-        import re
-        cve_match = re.search(r'(CVE-\d{4}-\d+)', self.topic) # Check if topic is a CVE ID
-        current_cve = cve_match.group(1) if cve_match else None
+        # Check if the prompt expects JSON output (heuristic based on format_instructions)
+        expects_json = "Pydantic schema" in prompt or "format_instructions" in prompt
 
-        if current_cve:
-            # Mock response for CVE reports
-            return f"""### Mock Report for {current_cve}
+        if expects_json:
+            console.print("[yellow]DRY RUN: Generating mock JSON response[/yellow]")
+            # Generate mock JSON matching GeneratedPost schema
+            import json
+            from datetime import datetime
 
-#### Vulnerability Snapshot (Mock Data)
-- **CVE ID**: {current_cve}
-- **CVSS Score**: 9.8 (Critical)
-- **EPSS Score**: 0.95 (High)
-- **Affected Products**: Mock Product Suite
+            mock_title = f"Mock Report for {self.topic}"
+            mock_tags = ["mock", "dry-run", self.topic.lower().replace(" ", "-")]
+            if "cve" in self.topic.lower():
+                mock_tags.extend(["cve", "security"])
 
-#### Technical Details (Mock)
-This is a mock technical description for {current_cve}. The actual report would detail the vulnerability.
-
-#### Mitigation (Mock)
-- Apply mock patches.
-- Implement mock workarounds.
-"""
+            mock_data = {
+                "title": mock_title,
+                "author": "Mock Author",
+                "publishDate": datetime.now().strftime("%Y-%m-%d"),
+                "tags": mock_tags,
+                "category": "Mock Category",
+                "description": f"This is a mock description for {self.topic} generated during a dry run.",
+                "content_body": f"# Mock Content for {self.topic}\n\nThis is the mock Markdown content body generated because the `--dry-run` flag was used.\n\n*   Provider: {self.mock_provider}\n*   Model: {self.mock_model}\n\nThis section would normally contain the detailed report."
+            }
+            return json.dumps(mock_data, indent=2)
         else:
-            # Generic mock response
+            # Fallback to generic Markdown mock response for prompts not expecting JSON
+            console.print("[yellow]DRY RUN: Generating mock Markdown response[/yellow]")
             return f"""# Mock Response for "{self.topic}"
 
 This is a mock response for a dry run. No API call was made.
@@ -692,10 +695,7 @@ def enhanced_cve_report(
         # Ensure our CVE front matter enhancer plugin is loaded
         # This will extract details from the content and add them to front matter
         try:
-            # Import here to ensure it's registered
-            import llm_markdown_generator.plugins.cve_front_matter_enhancer
-            
-            # Load all available plugins
+            # Load all available plugins (including the CVE enhancer if present)
             plugins_loaded = markdown_generator.load_plugins()
             
             if verbose:
