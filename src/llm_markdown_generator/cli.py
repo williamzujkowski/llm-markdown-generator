@@ -736,9 +736,6 @@ def enhanced_cve_report(
             "front_matter": front_matter_data
         }
         
-        # Update the config with security_advisory topic if not present
-        if "security_advisory" not in config.topics:
-
         # Define the prompt template to use
         prompt_template_name = "security_advisory.j2"
 

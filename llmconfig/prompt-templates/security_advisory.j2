@@ -1,23 +1,30 @@
 ## Security Advisory Prompt: {{ title | default('High-Risk Vulnerability Report') }}
 
-Please write a comprehensive security advisory report on **{{ topic }}** for {{ audience | default('security professionals and IT administrators') }}. The report should be in Markdown format and follow a structured format that provides actionable intelligence on high-risk vulnerabilities.
+Please generate a JSON object containing a comprehensive security advisory report on **{{ topic }}** for {{ audience | default('security professionals and IT administrators') }}.
 
-### Guidelines:
+**Output Format:**
+Your response MUST be a single JSON object conforming to the following Pydantic schema:
+```json
+{{ format_instructions }}
+```
+
+**Content Generation Guidelines:**
+Within the `content_body` field of the JSON object, generate a Markdown report following these guidelines:
 
 - Tone: {{ tone | default('authoritative, precise, and actionable') }}
-- Length: Aim for a detailed report with around 1000-1500 words
-- Structure the report with clear headings and subheadings
-- Include detailed CVE ID, CVSS score with vector string, and EPSS percentage (numerical value with 2 decimal places)
-- Assume the vulnerability has a CVSS score ≥ 9.0 and a high EPSS score
-- Emphasize actionable mitigations and recommendations
-- Balance technical details with practical guidance
+- Length: Aim for a detailed report with around 1000-1500 words within the `content_body`.
+- Structure the `content_body` Markdown with clear headings and subheadings.
+- Include detailed CVE ID, CVSS score with vector string, and EPSS percentage (numerical value with 2 decimal places) in the Markdown.
+- Assume the vulnerability has a CVSS score ≥ 9.0 and a high EPSS score.
+- Emphasize actionable mitigations and recommendations.
+- Balance technical details with practical guidance.
 
-### Content Requirements:
+**Required Markdown Sections within `content_body`:**
 
-#### 1. Report Format
-Begin with an executive summary that provides a clear, concise overview of the vulnerability, its severity, exploitation status, and immediate impact. Keep this to 2-3 paragraphs.
+#### 1. Executive Summary
+Provide a clear, concise overview of the vulnerability, its severity, exploitation status, and immediate impact (2-3 paragraphs).
 
-#### 2. Vulnerability Snapshot (Create a clearly formatted section with the following details):
+#### 2. Vulnerability Snapshot (Format clearly in Markdown):
 - **CVE ID**: [{{ topic }}](https://www.cve.org/CVERecord?id={{ topic }})
 - **CVSS Score**: 9.8 ([CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H](https://www.first.org/cvss/calculator/3.1#CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H)) - Use this vector or generate a plausible one
 - **CVSS Severity**: Critical
@@ -28,38 +35,38 @@ Begin with an executive summary that provides a clear, concise overview of the v
 - **Patch Availability**: [Yes/No with hyperlink to advisory if available]
 - **Exploitation Status**: [PoC Available/Active Exploitation Confirmed/Theoretical] with link to source
 
-#### 3. Technical Details Section
-- Provide a detailed vulnerability description (2-3 paragraphs)
-- Explain attack vectors and exploitation techniques with specific technical details
-- Include root cause analysis explaining the technical vulnerability
-- Describe the system/application impact at a technical level
+#### 3. Technical Details
+- Detailed vulnerability description (2-3 paragraphs).
+- Attack vectors and exploitation techniques with technical details.
+- Root cause analysis.
+- System/application impact (technical level).
 
-#### 4. Exploitation Context Section
-- Discuss current exploitation status with specific details
-- Provide information about potential or known threat actors targeting this vulnerability
-- Include realistic timelines for expected exploitation
-- Discuss technical requirements and complexity of exploitation
+#### 4. Exploitation Context
+- Current exploitation status details.
+- Potential/known threat actors.
+- Realistic timelines for expected exploitation.
+- Technical requirements and complexity of exploitation.
 
-#### 5. Impact Assessment Section
-- List specific business impacts with bullet points
-- Detail operational impacts to affected systems
-- Explain data security implications
-- Include cloud service provider implications if relevant
-- Provide a severity assessment with justification
+#### 5. Impact Assessment
+- Specific business impacts (bullet points).
+- Operational impacts.
+- Data security implications.
+- Cloud service provider implications (if relevant).
+- Severity assessment justification.
 
-#### 6. Mitigation and Remediation Section
-- List official patches and updates with specific version numbers and links
-- Provide detailed workarounds if patching is not immediately possible
-- Include specific configuration changes with example commands or settings
-- Detail detection methods, including log sources and specific indicators
+#### 6. Mitigation and Remediation
+- Official patches/updates (versions, links).
+- Detailed workarounds.
+- Specific configuration changes (example commands/settings).
+- Detection methods (log sources, indicators).
 
-#### 7. End with a References Section
-- Include links to official advisories
-- Link to security researcher blogs or analysis
-- Include vendor documentation for patches
-- Add other relevant security resources
+#### 7. References
+- Links to official advisories.
+- Security researcher blogs/analysis.
+- Vendor patch documentation.
+- Other relevant security resources.
 
-### Keywords to incorporate:
+**Keywords to incorporate within the `content_body`:**
 {% for keyword in keywords %}
 - {{ keyword }}
 {% endfor %}
@@ -69,10 +76,11 @@ Begin with an executive summary that provides a clear, concise overview of the v
 {% endfor %}
 {% endif %}
 
-Please generate a complete, publication-ready security advisory that security teams can use to understand, prioritize, and address this critical vulnerability. The report should be technically accurate while providing clear guidance on risk management and remediation steps. 
+**JSON Fields:**
+Populate the other fields in the JSON object (like `title`, `tags`, `author`, `publishDate`, `description`) based on the generated content and the input parameters (e.g., use `{{ title }}` for the JSON title field). Ensure `tags` includes `{{ topic }}`.
 
+**Example Markdown Style (for `content_body`):**
 Match the style, level of detail, and format of this example CVE report section:
-
 ---
 ### CVE-2024-34682: VMware vSphere Authentication Bypass Vulnerability
 
@@ -123,5 +131,4 @@ Given the critical role VMware vCenter plays in enterprise environments, success
   - Watch for unexpected administrative actions or configuration changes
   - Deploy IDS/IPS rules to detect exploit attempts (VMware has published IOCs)
 ---
-
-This is the exact level of detail and formatting I would like you to use.
+Remember to output ONLY the JSON object.

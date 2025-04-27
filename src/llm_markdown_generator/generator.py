@@ -4,21 +4,19 @@ Combines front matter and LLM-generated content into a final markdown file.
 """
 
 import datetime
-import json # Added import
+import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
 from pydantic import BaseModel, Field
 
-# LangChain components
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import Runnable
+# LangChain components for parsing and prompting
+from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.prompts import ChatPromptTemplate # Keep for template formatting
 
 from llm_markdown_generator.config import Config, TopicConfig
 from llm_markdown_generator.front_matter import FrontMatterGenerator, slugify
-# LLMProvider and PromptEngine are removed
+from llm_markdown_generator.llm_provider import LLMProvider # Import the base provider class
 
 
 class GeneratorError(Exception):
@@ -50,18 +48,18 @@ class MarkdownGenerator:
     def __init__(
         self,
         config: Config,
-        llm_model: Optional[BaseChatModel], # Accepts LangChain model, optional for dry runs
+        llm_provider: Optional[LLMProvider], # Use our custom provider type
         front_matter_generator: FrontMatterGenerator,
     ) -> None:
         """Initialize the markdown generator.
 
         Args:
             config: The main configuration object.
-            llm_model: The LangChain ChatModel to use for content generation.
+            llm_provider: The LLM provider instance (e.g., OpenAIProvider, GeminiProvider).
             front_matter_generator: The generator for front matter.
         """
         self.config = config
-        self.llm_model = llm_model
+        self.llm_provider = llm_provider # Use consistent naming
         self.front_matter_generator = front_matter_generator
         self.dry_run = False # Initialize dry_run flag
 
@@ -164,10 +162,12 @@ class MarkdownGenerator:
         Raises:
             GeneratorError: If there is an error generating the content.
         """
-        if self.llm_model is None:
-             raise GeneratorError("LLM model not initialized. Cannot generate content (maybe running dry-run?).")
+        # Check for provider existence unless in dry run mode
+        if not self.dry_run and self.llm_provider is None:
+             raise GeneratorError("LLM provider not initialized. Cannot generate content.")
 
-        if topic_name not in self.config.topics:
+        if topic_name not in self.config.topics and not prompt_template_override:
+            # If no specific topic config and no template override, we can't proceed
             raise GeneratorError(f"Topic '{topic_name}' not found in configuration")
 
         topic_config = self.config.topics[topic_name]
@@ -193,14 +193,12 @@ class MarkdownGenerator:
             except Exception as e:
                 raise GeneratorError(f"Error reading prompt template file {template_file_path}: {e}")
 
-            # Create LangChain PromptTemplate, ensuring format instructions are included
-            prompt = ChatPromptTemplate.from_template(
-                template=prompt_template_str,
-                partial_variables={"format_instructions": parser.get_format_instructions()},
-            )
+            # Create LangChain PromptTemplate object (still useful for formatting)
+            # Note: We are NOT including format_instructions here, it needs to be in the template file itself.
+            prompt_template = ChatPromptTemplate.from_template(template=prompt_template_str)
 
-            # 3. Prepare Prompt Context / Input for the Chain
-            prompt_input = {
+            # 3. Prepare Prompt Context / Input for the template rendering
+            prompt_context = {
                 "topic": custom_params.get("topic", topic_name), # Use specific topic if provided (e.g., CVE ID)
                 "keywords": custom_params.get("keywords", topic_config.keywords),
                 "audience": custom_params.get("audience", "general audience"),
@@ -209,27 +207,39 @@ class MarkdownGenerator:
                 **custom_params, # Allow overriding any context via custom_params
             }
 
-            # 4. Create the LCEL Chain
-            chain: Runnable[Dict, GeneratedPost] = prompt | self.llm_model | parser
+            # 4. Render the prompt string
+            # Use format_map for simple substitution, as ChatPromptTemplate expects ChatMessage objects for full rendering
+            rendered_prompt = prompt_template.template.format_map(prompt_context)
+            # Add format instructions manually if they weren't part of the context
+            # (They should be in the template file now, but double-check)
+            if "{format_instructions}" in rendered_prompt:
+                 rendered_prompt = rendered_prompt.replace("{format_instructions}", parser.get_format_instructions())
 
-            # 5. Invoke the Chain (or simulate for dry run)
+
+            # 5. Call the LLM Provider (or simulate for dry run)
             if self.dry_run:
-                print("[yellow]DRY RUN: Skipping LLM chain invocation.[/yellow]")
+                print("[yellow]DRY RUN: Skipping LLM API call.[/yellow]")
                 # Create mock GeneratedPost data for dry run
                 generated_data = GeneratedPost(
                     title=custom_params.get("title", f"Mock Title for {topic_name}"),
-                    tags=custom_params.get("keywords", topic_config.keywords),
+                    tags=custom_params.get("keywords", topic_config.keywords if topic_config else []),
                     category=topic_name,
                     author="Dry Run Author",
                     publishDate=datetime.datetime.now().strftime("%Y-%m-%d"),
                     description="This is a mock description generated during a dry run.",
-                    content_body=f"# Mock Content for {topic_name}\n\nThis content is generated because the `--dry-run` flag was used.\n\nPrompt Input:\n```json\n{json.dumps(prompt_input, indent=2)}\n```"
+                    content_body=f"# Mock Content for {topic_name}\n\nThis content is generated because the `--dry-run` flag was used.\n\nRendered Prompt (partial):\n```\n{rendered_prompt[:500]}...\n```"
                 )
-            elif self.llm_model is None:
-                 raise GeneratorError("LLM model not initialized. Cannot generate content.")
+            elif self.llm_provider is None: # Should not happen due to check at start, but defensive check
+                 raise GeneratorError("LLM provider not initialized. Cannot generate content.")
             else:
-                # LangChain handles retries, API calls, and parsing based on model/parser setup
-                generated_data: GeneratedPost = chain.invoke(prompt_input)
+                # Call the provider's generate_text method (handles retries internally)
+                llm_response_text = self.llm_provider.generate_text(rendered_prompt)
+
+                # Parse the LLM response using the Pydantic parser
+                try:
+                    generated_data: GeneratedPost = parser.parse(llm_response_text)
+                except Exception as parse_error:
+                    raise GeneratorError(f"Failed to parse LLM response into Pydantic model: {parse_error}\nLLM Response:\n{llm_response_text}")
 
 
             # 6. Prepare Front Matter Data (using the parsed or mock Pydantic object)
