@@ -705,8 +705,14 @@ def enhanced_cve_report(
             config=config,
             llm_provider=llm_provider,
             prompt_engine=prompt_engine, # Pass the created prompt engine
-            front_matter_generator=front_matter_generator
+            front_matter_generator=front_matter_generator # Pass the default one initially
         )
+
+        # *** Override the generator's front_matter_generator with the CVE-specific one ***
+        cve_front_matter_generator = FrontMatterGenerator(schema=cve_schema)
+        markdown_generator.front_matter_generator = cve_front_matter_generator
+        if verbose:
+            console.print(f"Using CVE-specific front matter generator with schema: {front_matter_schema}")
 
         # Ensure our CVE front matter enhancer plugin is loaded
         # This will extract details from the content and add them to front matter
