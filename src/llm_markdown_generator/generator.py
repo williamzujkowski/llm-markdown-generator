@@ -172,10 +172,22 @@ class MarkdownGenerator:
 
         if topic_name not in self.config.topics and not prompt_template_override:
             # If no specific topic config and no template override, we can't proceed
-            raise GeneratorError(f"Topic '{topic_name}' not found in configuration")
+            raise GeneratorError(f"Topic '{topic_name}' not found in configuration and no template override provided.")
 
-        topic_config = self.config.topics[topic_name]
+        # Attempt to get topic config, but allow proceeding if override is used
+        topic_config = self.config.topics.get(topic_name)
         custom_params = custom_params or {}
+
+        # Determine template filename
+        template_filename = prompt_template_override
+        if not template_filename:
+            if not topic_config:
+                 # This case should be caught above, but defensive check
+                 raise GeneratorError(f"Cannot determine prompt template for topic '{topic_name}'.")
+            template_filename = topic_config.prompt_template
+
+        if not template_filename:
+             raise GeneratorError(f"No prompt template specified for topic '{topic_name}' and no override provided.")
 
         try:
             # 1. Define Pydantic Output Parser
@@ -190,10 +202,12 @@ class MarkdownGenerator:
             # 3. Prepare Prompt Context / Input for the template rendering
             prompt_context = {
                 "topic": custom_params.get("topic", topic_name), # Use specific topic if provided (e.g., CVE ID)
-                "keywords": custom_params.get("keywords", topic_config.keywords),
+                # Use keywords from custom_params first, then topic_config (if exists), then empty list
+                "keywords": custom_params.get("keywords", topic_config.keywords if topic_config else []),
                 "audience": custom_params.get("audience", "general audience"),
                 "title": custom_params.get("title", None), # Pass title if provided
-                **topic_config.custom_data,
+                # Include custom_data from topic_config if it exists
+                **(topic_config.custom_data if topic_config else {}),
                 **custom_params, # Allow overriding any context via custom_params
             }
             # Add format instructions to the context for the prompt engine
@@ -209,9 +223,11 @@ class MarkdownGenerator:
             if self.dry_run:
                 print("[yellow]DRY RUN: Skipping LLM API call.[/yellow]")
                 # Create mock GeneratedPost data for dry run
+                # Use the same logic for keywords as in prompt_context
+                mock_keywords = custom_params.get("keywords", topic_config.keywords if topic_config else [])
                 generated_data = GeneratedPost(
                     title=custom_params.get("title", f"Mock Title for {topic_name}"),
-                    tags=custom_params.get("keywords", topic_config.keywords if topic_config else []),
+                    tags=mock_keywords,
                     category=topic_name,
                     author="Dry Run Author",
                     publishDate=datetime.datetime.now().strftime("%Y-%m-%d"),
