@@ -3,14 +3,21 @@
 Combines front matter and LLM-generated content into a final markdown file.
 """
 
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Type
+
+from pydantic import BaseModel, Field
+
+# LangChain components
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.output_parsers import PydanticOutputParser, StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import Runnable
 
 from llm_markdown_generator.config import Config, TopicConfig
 from llm_markdown_generator.front_matter import FrontMatterGenerator, slugify
-from llm_markdown_generator.llm_provider import LLMProvider
-from llm_markdown_generator.prompt_engine import PromptEngine
+# LLMProvider and PromptEngine are removed
 
 
 class GeneratorError(Exception):
@@ -18,29 +25,40 @@ class GeneratorError(Exception):
     pass
 
 
+# Define a Pydantic model for the structured output (front matter + content)
+# This should ideally align with the front_matter_schema, but defined explicitly here
+class GeneratedPost(BaseModel):
+    """Pydantic model for the generated post structure."""
+    title: str = Field(description="The main title of the blog post.")
+    tags: List[str] = Field(default_factory=list, description="Relevant tags for the post.")
+    category: Optional[str] = Field(None, description="The primary category of the post.")
+    # Add other common front matter fields as needed based on schema
+    author: Optional[str] = Field(None, description="Author of the post.")
+    publishDate: Optional[str] = Field(None, description="Date the post was published (YYYY-MM-DD).")
+    # The main content body
+    content_body: str = Field(description="The full markdown content body of the blog post.")
+
+
 class MarkdownGenerator:
-    """Main generator for markdown content using LLMs."""
+    """Main generator for markdown content using LLMs and LangChain."""
 
     def __init__(
         self,
         config: Config,
-        llm_provider: LLMProvider,
-        prompt_engine: PromptEngine,
+        llm_model: Optional[BaseChatModel], # Accepts LangChain model, optional for dry runs
         front_matter_generator: FrontMatterGenerator,
     ) -> None:
         """Initialize the markdown generator.
 
         Args:
             config: The main configuration object.
-            llm_provider: The LLM provider to use for content generation.
-            prompt_engine: The prompt engine for rendering templates.
+            llm_model: The LangChain ChatModel to use for content generation.
             front_matter_generator: The generator for front matter.
         """
         self.config = config
-        self.llm_provider = llm_provider
-        self.prompt_engine = prompt_engine
+        self.llm_model = llm_model
         self.front_matter_generator = front_matter_generator
-        
+
         # Initialize plugin registry
         self._content_processors = []
         self._front_matter_enhancers = []
@@ -129,6 +147,9 @@ class MarkdownGenerator:
         Raises:
             GeneratorError: If there is an error generating the content.
         """
+        if self.llm_model is None:
+             raise GeneratorError("LLM model not initialized. Cannot generate content (maybe running dry-run?).")
+
         if topic_name not in self.config.topics:
             raise GeneratorError(f"Topic '{topic_name}' not found in configuration")
 
@@ -136,84 +157,111 @@ class MarkdownGenerator:
         custom_params = custom_params or {}
 
         try:
-            # Prepare prompt context
-            prompt_context = {
-                "topic": topic_name,
-                "keywords": topic_config.keywords,
-                **topic_config.custom_data,
-                **custom_params,
-            }
+            # 1. Define Pydantic Output Parser
+            parser = PydanticOutputParser(pydantic_object=GeneratedPost)
 
-            # Render prompt from template
-            prompt = self.prompt_engine.render_prompt(
-                topic_config.prompt_template, prompt_context
+            # 2. Create Prompt Template
+            # TODO: Load template content from topic_config.prompt_template file
+            # For now, using a placeholder template string.
+            # The template MUST include format instructions from the parser.
+            prompt_template_str = """
+Generate a blog post about the topic: {topic}
+
+Focus on the following keywords: {keywords}
+Audience: {audience}
+
+Please structure your response as a JSON object matching the following schema:
+{format_instructions}
+
+Ensure the 'content_body' field contains the full markdown content of the post.
+Use the provided title if available: {title}
+"""
+            prompt = ChatPromptTemplate.from_template(
+                prompt_template_str,
+                partial_variables={"format_instructions": parser.get_format_instructions()}
             )
 
-            # Generate content using LLM provider
-            content = self.llm_provider.generate_text(prompt)
-
-            # Prepare front matter data
-            # For simplicity, we're using basic front matter data derived from the topic
-            front_matter_data = {
-                "title": custom_params.get("title", f"{topic_name.capitalize()} Post"),
-                "tags": topic_config.keywords,
-                "category": topic_name,
+            # 3. Prepare Prompt Context / Input for the Chain
+            prompt_input = {
+                "topic": custom_params.get("topic", topic_name), # Use specific topic if provided (e.g., CVE ID)
+                "keywords": custom_params.get("keywords", topic_config.keywords),
+                "audience": custom_params.get("audience", "general audience"),
+                "title": custom_params.get("title", None), # Pass title if provided
+                **topic_config.custom_data,
+                **custom_params, # Allow overriding any context via custom_params
             }
-            
-            # Apply front matter enhancer plugins
+
+            # 4. Create the LCEL Chain
+            chain: Runnable[Dict, GeneratedPost] = prompt | self.llm_model | parser
+
+            # 5. Invoke the Chain
+            # LangChain handles retries, API calls, and parsing based on model/parser setup
+            generated_data: GeneratedPost = chain.invoke(prompt_input)
+
+            # 6. Prepare Front Matter Data (using the parsed Pydantic object)
+            # Apply front matter enhancer plugins (pass the Pydantic object)
+            front_matter_pydantic = generated_data # Start with the parsed data
+            content_body = generated_data.content_body # Extract content body
+
             for enhancer in self._front_matter_enhancers:
                 try:
-                    if hasattr(enhancer, "__name__"):
-                        plugin_name = enhancer.__name__
-                    else:
-                        plugin_name = str(enhancer)
-                    
-                    # Create plugin params without 'topic' and 'front_matter' if already in custom_params
-                    plugin_params = {k: v for k, v in custom_params.items() 
-                                    if k not in ('topic', 'front_matter')}
-                    
-                    # Apply the enhancer
+                    plugin_name = getattr(enhancer, "__name__", str(enhancer))
+                    plugin_params = {k: v for k, v in custom_params.items()
+                                     if k not in ('topic', 'front_matter', 'content')} # Avoid conflicts
+
+                    # Pass the Pydantic object and content body to enhancers
+                    # Enhancers might need updating to expect a Pydantic model
                     enhanced_data = enhancer(
-                        front_matter=front_matter_data,
-                        content=content,
+                        front_matter=front_matter_pydantic, # Pass Pydantic model
+                        content=content_body,
                         topic=topic_name,
                         **plugin_params
                     )
-                    
-                    # Update front matter data
-                    if enhanced_data and isinstance(enhanced_data, dict):
-                        front_matter_data = enhanced_data
-                    
+
+                    # Update front matter data if enhancer returns a valid Pydantic model
+                    if enhanced_data and isinstance(enhanced_data, BaseModel):
+                         # Ensure it's the correct type or compatible
+                         if isinstance(enhanced_data, GeneratedPost):
+                             front_matter_pydantic = enhanced_data
+                         else:
+                             # Attempt to update fields if it's a different Pydantic model
+                             try:
+                                 update_dict = enhanced_data.model_dump(exclude_unset=True)
+                                 front_matter_pydantic = GeneratedPost(**{**front_matter_pydantic.model_dump(), **update_dict})
+                             except Exception as update_err:
+                                 print(f"Warning: Could not merge enhanced data from plugin {plugin_name}: {update_err}")
+                    elif enhanced_data:
+                         print(f"Warning: Enhancer plugin {plugin_name} did not return a Pydantic model. Skipping update.")
+
                 except Exception as e:
-                    # Log error but continue with other plugins
                     print(f"Error in front matter enhancer plugin {plugin_name}: {str(e)}")
 
-            # Generate front matter
-            front_matter = self.front_matter_generator.generate(front_matter_data)
+            # 7. Generate YAML Front Matter from the Pydantic object
+            front_matter_yaml = self.front_matter_generator.generate(front_matter_pydantic)
 
-            # Combine front matter and content
-            full_content = f"{front_matter}\n{content}"
-            
-            # Apply content processor plugins
+            # 8. Combine Front Matter and Content Body
+            full_content = f"{front_matter_yaml}\n{content_body}" # Use extracted content body
+
+            # 9. Apply content processor plugins
             for processor in self._content_processors:
                 try:
                     if hasattr(processor, "__name__"):
                         plugin_name = processor.__name__
                     else:
-                        plugin_name = str(processor)
-                        
-                    # Create plugin params excluding any that would conflict with processor signature
-                    plugin_params = {k: v for k, v in custom_params.items() 
-                                    if k not in ('topic', 'content', 'front_matter_data')}
-                    
+                        plugin_name = getattr(processor, "__name__", str(processor))
+
+                    # Create plugin params excluding any that would conflict
+                    plugin_params = {k: v for k, v in custom_params.items()
+                                     if k not in ('topic', 'content', 'front_matter_data')}
+
+                    # Pass the Pydantic model containing front matter data
                     full_content = processor(
-                        content=full_content,
+                        content=full_content, # Pass the combined content
                         topic=topic_name,
-                        front_matter_data=front_matter_data,
+                        front_matter_data=front_matter_pydantic, # Pass Pydantic model
                         **plugin_params
                     )
                 except Exception as e:
-                    # Log error but continue with other plugins
                     print(f"Error in content processor plugin {plugin_name}: {str(e)}")
 
             return full_content

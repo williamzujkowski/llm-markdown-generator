@@ -5,9 +5,10 @@ based on a defined schema.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import yaml
+from pydantic import BaseModel
 
 
 class FrontMatterError(Exception):
@@ -26,14 +27,14 @@ class FrontMatterGenerator:
             schema: A dictionary defining the structure and default values
                    for the front matter.
         """
+        # Schema might still be useful for default values or validation if not using Pydantic model directly
         self.schema = schema
 
-    def generate(self, data: Dict[str, Any] = None) -> str:
-        """Generate YAML front matter based on the schema and provided data.
+    def generate(self, data: Union[Dict[str, Any], BaseModel]) -> str:
+        """Generate YAML front matter from a dictionary or Pydantic model.
 
         Args:
-            data: A dictionary of values to use in the front matter,
-                 overriding schema defaults where provided.
+            data: A dictionary or Pydantic BaseModel containing the front matter fields.
 
         Returns:
             str: The generated YAML front matter, including the opening and
@@ -43,25 +44,39 @@ class FrontMatterGenerator:
             FrontMatterError: If there is an error generating the front matter.
         """
         if data is None:
-            data = {}
+            front_matter_dict = {}
+        elif isinstance(data, BaseModel):
+            # Convert Pydantic model to dict, excluding unset fields for cleaner YAML
+            front_matter_dict = data.model_dump(exclude_unset=True, mode='python')
+        elif isinstance(data, dict):
+            front_matter_dict = data
+        else:
+            raise FrontMatterError("Input data must be a dictionary or Pydantic BaseModel")
 
         try:
-            # Start with the schema defaults
-            front_matter = self.schema.copy()
+            # Apply schema defaults if necessary (optional, Pydantic model might handle defaults)
+            # Example: Merge with schema defaults, giving priority to provided data
+            # final_dict = {**self.schema, **front_matter_dict}
 
-            # Override with provided data
-            for key, value in data.items():
-                # Include all keys from the data, not just those in schema
-                front_matter[key] = value
+            # For now, just use the provided data directly
+            final_dict = front_matter_dict
 
-            # Add current date if not provided
-            if "date" in front_matter and not data.get("date"):
-                front_matter["date"] = datetime.now().strftime("%Y-%m-%d")
+            # Ensure date is present if expected (can be handled by Pydantic model default)
+            if "publishDate" in final_dict and not final_dict.get("publishDate"):
+                 final_dict["publishDate"] = datetime.now().strftime("%Y-%m-%d")
+            elif "date" in final_dict and not final_dict.get("date"):
+                 final_dict["date"] = datetime.now().strftime("%Y-%m-%d")
+
 
             # Convert to YAML
-            yaml_str = yaml.dump(
-                front_matter, default_flow_style=False, sort_keys=False, 
-                explicit_start=False, explicit_end=False
+            # Use safe_dump and allow unicode for broader character support
+            yaml_str = yaml.safe_dump(
+                final_dict,
+                default_flow_style=False,
+                sort_keys=False,
+                allow_unicode=True,
+                explicit_start=False,
+                explicit_end=False
             )
 
             # Add diagnostic output when debugging
