@@ -127,25 +127,14 @@ def test_cli_with_mock_provider(temp_config_files, monkeypatch, mock_provider):
     
     class MockResponse:
         def __init__(self):
-            self.prompt_tokens = 10
-            self.completion_tokens = 20
-            self.total_tokens = 30
-            self.cost = 0.001  # Cost must be present for the CLI estimated cost output
+            pass
     
     class MockProvider:
         def __init__(self, *args, **kwargs):
-            self._total_usage = MockResponse()
+            pass
             
         def generate_text(self, prompt):
             return mock_response
-            
-        def get_token_usage(self):
-            return self._total_usage
-            
-        # Mock total_usage property to return a consistent response
-        @property
-        def total_usage(self):
-            return self._total_usage
     
     # Create a fully mocked generator function to replace the actual content generation
     from llm_markdown_generator import generator
@@ -242,11 +231,6 @@ This is a mock response from the LLM provider.
     assert "title: Test Title" in content
     assert mock_response in content
     
-    # Check that some kind of token usage information was printed in verbose mode
-    # With the rich table formatting, we can't check for exact text
-    assert "Token Usage Information" in result.stdout
-    assert "Total tokens" in result.stdout
-    assert "Session Token Usage" in result.stdout
 
 
 @pytest.mark.skip(reason="Need mocking to work consistently in CI environment")

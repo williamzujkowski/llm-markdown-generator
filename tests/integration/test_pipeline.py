@@ -31,11 +31,6 @@ class MockLLMProvider:
         """
         self.mock_response = mock_response or "This is a mock LLM response."
         self.prompts = []
-        self.total_usage = mock.MagicMock()
-        self.total_usage.prompt_tokens = 10
-        self.total_usage.completion_tokens = 20
-        self.total_usage.total_tokens = 30
-        self.total_usage.cost = 0.001
     
     def generate_text(self, prompt):
         """Mock implementation of generate_text.
@@ -49,9 +44,6 @@ class MockLLMProvider:
         self.prompts.append(prompt)
         return self.mock_response
     
-    def get_token_usage(self):
-        """Mock implementation of get_token_usage."""
-        return self.total_usage
 
 
 @pytest.fixture
@@ -325,12 +317,6 @@ def test_openai_integration(temp_config_dir):
     output_file = Path(output_path)
     assert output_file.exists()
     
-    # Verify token usage reporting
-    usage = llm_provider.get_token_usage()
-    assert usage.prompt_tokens > 0
-    assert usage.completion_tokens > 0
-    assert usage.total_tokens > 0
-    assert usage.cost is not None
 
 
 @pytest.mark.skipif(
@@ -411,9 +397,3 @@ def test_gemini_integration(temp_config_dir):
     output_file = Path(output_path)
     assert output_file.exists()
     
-    # Verify token usage reporting
-    usage = llm_provider.get_token_usage()
-    assert usage.prompt_tokens > 0
-    assert usage.completion_tokens > 0
-    assert usage.total_tokens > 0
-    assert usage.cost is not None

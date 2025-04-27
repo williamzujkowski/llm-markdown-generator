@@ -86,16 +86,8 @@ def main():
         output_path = generator.write_to_file(content, title=f"Example {topic.capitalize()} Post")
         print(f"Content written to: {output_path}")
         
-        # 9. Display token usage information
-        token_usage = llm_provider.get_token_usage()
-        print("\nToken Usage Information:")
-        print(f"  Prompt tokens: {token_usage.prompt_tokens}")
-        print(f"  Completion tokens: {token_usage.completion_tokens}")
-        print(f"  Total tokens: {token_usage.total_tokens}")
-        
-        # Show cost information if available
-        if token_usage.cost is not None:
-            print(f"  Estimated cost: ${token_usage.cost:.6f}")
+        # 9. Print completion message
+        print("\nGeneration complete")
         
     except ConfigError as e:
         print(f"Configuration error: {e}", file=sys.stderr)

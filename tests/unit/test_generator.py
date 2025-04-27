@@ -12,7 +12,7 @@ import pytest
 from llm_markdown_generator.config import Config, TopicConfig, LLMProviderConfig, FrontMatterConfig
 from llm_markdown_generator.front_matter import FrontMatterGenerator
 from llm_markdown_generator.generator import GeneratorError, MarkdownGenerator
-from llm_markdown_generator.llm_provider import LLMProvider, TokenUsage
+from llm_markdown_generator.llm_provider import LLMProvider
 from llm_markdown_generator.prompt_engine import PromptEngine
 
 
@@ -23,27 +23,11 @@ class MockLLMProvider(LLMProvider):
         super().__init__()
         self.response = response
         self.prompt_history = []
-        self.last_usage = TokenUsage(
-            prompt_tokens=50,
-            completion_tokens=30,
-            total_tokens=80,
-            cost=0.00123
-        )
-        self.total_usage = TokenUsage(
-            prompt_tokens=100,
-            completion_tokens=60,
-            total_tokens=160,
-            cost=0.00246
-        )
 
     def generate_text(self, prompt: str) -> str:
         """Generate text from the provided prompt (mock)."""
         self.prompt_history.append(prompt)
         return self.response
-        
-    def get_token_usage(self) -> TokenUsage:
-        """Get token usage information for the most recent request."""
-        return self.last_usage
 
 
 class MockPromptEngine:
@@ -152,33 +136,6 @@ class TestMarkdownGenerator:
         assert "---\nyaml: front matter\n---\n" in content
         assert "This is a mock LLM response." in content
         
-    def test_get_token_usage(self, markdown_generator):
-        """Test getting token usage from the generator."""
-        # Generate content to ensure LLM provider is called
-        markdown_generator.generate_content("python")
-        
-        # Get token usage
-        usage = markdown_generator.get_token_usage()
-        
-        # Check that it matches what's expected from the mock provider
-        assert usage.prompt_tokens == 50
-        assert usage.completion_tokens == 30
-        assert usage.total_tokens == 80
-        assert usage.cost == 0.00123
-        
-    def test_get_total_usage(self, markdown_generator):
-        """Test getting total token usage from the generator."""
-        # Generate content to ensure LLM provider is called
-        markdown_generator.generate_content("python")
-        
-        # Get total usage
-        total_usage = markdown_generator.get_total_usage()
-        
-        # Check that it matches what's expected from the mock provider
-        assert total_usage.prompt_tokens == 100
-        assert total_usage.completion_tokens == 60
-        assert total_usage.total_tokens == 160
-        assert total_usage.cost == 0.00246
 
     def test_generate_content_with_custom_params(self, markdown_generator):
         """Test content generation with custom parameters."""

@@ -9,7 +9,7 @@ import datetime
 
 from llm_markdown_generator.config import Config, TopicConfig
 from llm_markdown_generator.front_matter import FrontMatterGenerator, slugify
-from llm_markdown_generator.llm_provider import LLMProvider, TokenUsage
+from llm_markdown_generator.llm_provider import LLMProvider
 from llm_markdown_generator.prompt_engine import PromptEngine
 
 
@@ -167,13 +167,17 @@ class MarkdownGenerator:
                         plugin_name = enhancer.__name__
                     else:
                         plugin_name = str(enhancer)
-                        
+                    
+                    # Create plugin params without 'topic' and 'front_matter' if already in custom_params
+                    plugin_params = {k: v for k, v in custom_params.items() 
+                                    if k not in ('topic', 'front_matter')}
+                    
                     # Apply the enhancer
                     enhanced_data = enhancer(
                         front_matter=front_matter_data,
                         content=content,
                         topic=topic_name,
-                        **custom_params
+                        **plugin_params
                     )
                     
                     # Update front matter data
@@ -193,36 +197,31 @@ class MarkdownGenerator:
             # Apply content processor plugins
             for processor in self._content_processors:
                 try:
+                    if hasattr(processor, "__name__"):
+                        plugin_name = processor.__name__
+                    else:
+                        plugin_name = str(processor)
+                        
+                    # Create plugin params excluding any that would conflict with processor signature
+                    plugin_params = {k: v for k, v in custom_params.items() 
+                                    if k not in ('topic', 'content', 'front_matter_data')}
+                    
                     full_content = processor(
                         content=full_content,
                         topic=topic_name,
                         front_matter_data=front_matter_data,
-                        **custom_params
+                        **plugin_params
                     )
                 except Exception as e:
                     # Log error but continue with other plugins
-                    print(f"Error in content processor plugin: {str(e)}")
+                    print(f"Error in content processor plugin {plugin_name}: {str(e)}")
 
             return full_content
 
         except Exception as e:
             raise GeneratorError(f"Error generating content for topic '{topic_name}': {str(e)}")
     
-    def get_token_usage(self) -> TokenUsage:
-        """Get token usage information for the most recent generation.
-
-        Returns:
-            TokenUsage: Token usage information from the LLM provider.
-        """
-        return self.llm_provider.get_token_usage()
-    
-    def get_total_usage(self) -> TokenUsage:
-        """Get total token usage information across all generations.
-
-        Returns:
-            TokenUsage: Accumulated token usage information.
-        """
-        return self.llm_provider.total_usage
+# Token tracking functionality has been removed
 
     def write_to_file(self, content: str, filename: Optional[str] = None, title: Optional[str] = None) -> str:
         """Write generated content to a file.

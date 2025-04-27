@@ -15,7 +15,6 @@ from llm_markdown_generator.llm_provider import OpenAIProvider, GeminiProvider
 from llm_markdown_generator.prompt_engine import PromptEngine
 from llm_markdown_generator.front_matter import FrontMatterGenerator
 from llm_markdown_generator.generator import MarkdownGenerator
-from llm_markdown_generator.token_tracker import TokenTracker
 from llm_markdown_generator.plugins import list_plugins, get_plugin
 
 
@@ -113,9 +112,6 @@ def main():
     # Add audience to context
     context["audience"] = args.audience
     
-    # Set up token tracker
-    token_log = os.path.join(args.output_dir, "token_usage.jsonl") if args.verbose else None
-    token_tracker = TokenTracker(log_path=token_log)
     
     # Create LLM provider
     provider_config = config.llm_provider
@@ -281,15 +277,7 @@ This is a mock response since the LLM API call timed out.
     print(f"Output file: {output_path}")
     
     if args.verbose:
-        print("\nToken Usage:")
-        total_usage = token_tracker.get_total_usage()
-        print(f"  Prompt tokens: {total_usage.prompt_tokens}")
-        print(f"  Completion tokens: {total_usage.completion_tokens}")
-        print(f"  Total tokens: {total_usage.total_tokens}")
-        
-        # Calculate cost if available
-        if total_usage.cost is not None:
-            print(f"  Estimated cost: ${total_usage.cost:.6f}")
+        print("\nGeneration complete")
 
 
 if __name__ == "__main__":

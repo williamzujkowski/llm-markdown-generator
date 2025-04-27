@@ -34,7 +34,6 @@ from llm_markdown_generator.error_handler import (
 from llm_markdown_generator.front_matter import FrontMatterGenerator
 from llm_markdown_generator.generator import MarkdownGenerator
 from llm_markdown_generator.llm_provider import GeminiProvider, LLMProvider, OpenAIProvider
-from llm_markdown_generator.prompt_engine import PromptEngine
 
 # Create a Rich console for prettier output
 console = Console()

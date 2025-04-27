@@ -19,50 +19,10 @@ from llm_markdown_generator.llm_provider import (
     GeminiProvider, 
     LLMError, 
     LLMProvider, 
-    OpenAIProvider,
-    TokenUsage
+    OpenAIProvider
 )
 
 
-class TestTokenUsage:
-    """Tests for the TokenUsage class."""
-    
-    def test_token_usage_init(self):
-        """Test initialization of TokenUsage."""
-        usage = TokenUsage()
-        assert usage.prompt_tokens == 0
-        assert usage.completion_tokens == 0
-        assert usage.total_tokens == 0
-        assert usage.cost is None
-        
-    def test_token_usage_with_values(self):
-        """Test TokenUsage with specific values."""
-        usage = TokenUsage(
-            prompt_tokens=100,
-            completion_tokens=50,
-            total_tokens=150,
-            cost=0.0123
-        )
-        assert usage.prompt_tokens == 100
-        assert usage.completion_tokens == 50
-        assert usage.total_tokens == 150
-        assert usage.cost == 0.0123
-        
-    def test_token_usage_str(self):
-        """Test string representation of TokenUsage."""
-        # Without cost
-        usage1 = TokenUsage(prompt_tokens=100, completion_tokens=50, total_tokens=150)
-        assert "prompt: 100" in str(usage1)
-        assert "completion: 50" in str(usage1)
-        assert "total: 150" in str(usage1)
-        assert "cost" not in str(usage1)
-        
-        # With cost
-        usage2 = TokenUsage(prompt_tokens=100, completion_tokens=50, total_tokens=150, cost=0.0123)
-        assert "prompt: 100" in str(usage2)
-        assert "completion: 50" in str(usage2)
-        assert "total: 150" in str(usage2)
-        assert "cost: $0.012300" in str(usage2)
 
 
 class TestLLMProvider:
@@ -108,11 +68,8 @@ class TestLLMProvider:
             "choices": [
                 {"message": {"content": " This is a test response."}}
             ],
-            "usage": {
-                "prompt_tokens": 10,
-                "completion_tokens": 5,
-                "total_tokens": 15
-            }
+            "id": "chatcmpl-123",
+            "created": 1677858242
         }
         mock_response.raise_for_status = mock.Mock()
 
@@ -130,12 +87,6 @@ class TestLLMProvider:
 
                 assert result == "This is a test response."
                 
-                # Check token usage
-                usage = provider.get_token_usage()
-                assert usage.prompt_tokens == 10
-                assert usage.completion_tokens == 5
-                assert usage.total_tokens == 15
-                assert usage.cost is not None
 
     def test_openai_provider_generate_text_request_error(self):
         """Test handling of request errors during text generation."""
@@ -238,11 +189,8 @@ class TestLLMProvider:
             "choices": [
                 {"message": {"content": "Retry successful response"}}
             ],
-            "usage": {
-                "prompt_tokens": 10,
-                "completion_tokens": 5,
-                "total_tokens": 15
-            }
+            "id": "chatcmpl-123",
+            "created": 1677858242
         }
         mock_success_response.raise_for_status = mock.Mock()
         
@@ -332,10 +280,7 @@ class TestLLMProvider:
                     }
                 }
             ],
-            "usageMetadata": {
-                "promptTokenCount": 12,
-                "candidatesTokenCount": 8
-            }
+            "modelId": "gemini-1.5-flash-001"
         }
         mock_response.raise_for_status = mock.Mock()
 
@@ -351,13 +296,6 @@ class TestLLMProvider:
             result = provider.generate_text("Test prompt")
 
             assert result == "This is a test response from Gemini."
-            
-            # Check token usage
-            usage = provider.get_token_usage()
-            assert usage.prompt_tokens == 12
-            assert usage.completion_tokens == 8
-            assert usage.total_tokens == 20
-            assert usage.cost is not None
 
     def test_gemini_provider_generate_text_request_error(self):
         """Test handling of request errors during Gemini text generation."""

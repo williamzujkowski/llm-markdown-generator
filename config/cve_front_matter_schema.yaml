@@ -1,0 +1,42 @@
+# Front Matter Schema for CVE Vulnerability Reports
+# Enhanced schema with comprehensive fields for better indexing and filtering
+
+# Core Vulnerability Identifiers
+cveId: null  # Will be filled during generation e.g., "CVE-2024-29896"
+title: null  # Descriptive title, e.g. "CVE-2024-29896: Critical RCE in ExampleCorp SecureFile Transfer Application"
+publishDate: null  # Will be set to current date during generation if null
+
+# CVSS Information
+cvssScore: null  # Number: 0.0-10.0
+cvssVector: null  # String: CVSS vector string
+cvssSeverity: null  # String: one of "Low", "Medium", "High", "Critical"
+
+# Additional Scoring
+epssScore: null  # Number: 0.0-1.0 probability of exploitation
+
+# Classification
+cwe: null  # String: CWE identifier e.g., "CWE-787"
+vulnerabilityType: null  # String: Vulnerability type e.g., "Remote Code Execution (RCE)"
+
+# Product Information
+vendor: null  # String: Vendor name
+product: null  # String: Product name
+affectedProductsString: null  # Descriptive string with versions
+
+# Patch Information
+patchAvailable: false  # Boolean
+patchLink: null  # URL to patch information
+
+# Exploitation Information
+exploitationStatus: null  # String: e.g., "PoC Available", "Active Exploitation", "No Known Exploitation"
+exploitationStatusLink: null  # URL to PoC or exploitation information
+
+# Metadata Fields
+tags: []  # Array of strings for filtering
+author: "AI Content Generator"  # Default author
+description: ""  # Short summary of vulnerability
+draft: false
+last_modified: null  # Will be updated via git or build process
+
+# Display Settings
+show_toc: true  # Show table of contents

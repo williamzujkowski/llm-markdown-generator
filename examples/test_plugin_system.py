@@ -68,10 +68,6 @@ def hello_world():
 
 Thanks for using our generator!
 """
-        # Create mock for total usage
-        from llm_markdown_generator.llm_provider import TokenUsage
-        self._token_usage = TokenUsage(10, 100, 110, 0.001)
-        self._total_usage = TokenUsage(10, 100, 110, 0.001)
 
     def generate_text(self, prompt: str) -> str:
         """Generate text based on the given prompt.
@@ -84,22 +80,6 @@ Thanks for using our generator!
         """
         return self.mock_response
         
-    def get_token_usage(self):
-        """Get token usage statistics.
-        
-        Returns:
-            Mock token usage statistics
-        """
-        return self._token_usage
-        
-    @property
-    def total_usage(self):
-        """Get accumulated token usage.
-        
-        Returns:
-            Mock token usage statistics
-        """
-        return self._total_usage
 
 
 def create_simple_config() -> Config:

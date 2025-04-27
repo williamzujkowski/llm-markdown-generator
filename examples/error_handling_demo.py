@@ -138,13 +138,8 @@ def generate_text_with_safety(provider_type="openai", prompt=""):
         logger.info(f"Generating text with prompt: {prompt}")
         response = provider.generate_text(prompt)
         
-        # Report token usage
-        usage = provider.get_token_usage()
+        # Log result
         logger.info(f"Generated {len(response)} characters")
-        logger.info(f"Token usage: {usage.prompt_tokens} prompt + "
-                   f"{usage.completion_tokens} completion = {usage.total_tokens} total")
-        if usage.cost is not None:
-            logger.info(f"Estimated cost: ${usage.cost:.6f}")
         
         return response
     

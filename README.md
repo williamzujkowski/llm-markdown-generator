@@ -72,8 +72,8 @@ llm-markdown python --title "Python Generators" --plugins "add_timestamp,add_rea
 # Use a custom plugins directory
 llm-markdown python --title "Python Tips" --plugins-dir "./custom_plugins"
 
-# Track token usage to a log file
-llm-markdown python --title "Python Classes" --token-log "token_usage.jsonl" --usage-report
+# Show token usage during generation
+llm-markdown python --title "Python Classes" --show-tokens
 
 # Run in dry-run mode (no API calls, no file writes)
 llm-markdown python --title "Python Testing" --dry-run --verbose
@@ -109,8 +109,7 @@ Options for generate command:
   --dry-run                       Run without actually calling the LLM API or writing files
   -r, --retries INTEGER           Number of retries for API calls  [default: 3]
   --retry-delay FLOAT             Base delay in seconds between retries  [default: 1.0]
-  --token-log TEXT                Path to log token usage (e.g., 'token_usage.jsonl')
-  --usage-report                  Show detailed token usage report at the end
+  --show-tokens                    Show token usage information after generation
   -e, --extra TEXT                Extra parameters in JSON format (e.g., '{"temperature": 0.9}')
   --help                          Show this message and exit.
 ```
@@ -221,27 +220,19 @@ The generated CVE reports include:
 
 ## 📊 Token Usage Tracking
 
-The framework includes token usage tracking and reporting features to help manage costs and usage:
+The framework includes simple token usage tracking to help monitor costs:
 
 ```bash
-# Track token usage to a log file
-llm-markdown python --title "Python Classes" --token-log "token_usage.jsonl"
-
-# Generate a usage report from a log file
-llm-markdown usage-report token_usage.jsonl --detailed
-
-# Display a usage report during generation
-llm-markdown python --title "Python Classes" --token-log "token_usage.jsonl" --usage-report
+# Show token usage during generation
+llm-markdown python --title "Python Classes" --show-tokens
 ```
 
-### Usage Report Features
+### Token Usage Information
 
-The token usage report provides:
+The token usage information displays:
 
 - Total tokens used (prompt, completion, and total)
 - Estimated cost based on provider pricing
-- Breakdown by provider and model
-- Operation counts
 - Detailed record history (with `--detailed` flag)
 
 ## 🧪 Testing

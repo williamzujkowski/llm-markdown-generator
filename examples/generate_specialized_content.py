@@ -15,7 +15,6 @@ from llm_markdown_generator.llm_provider import create_llm_provider
 from llm_markdown_generator.prompt_engine import PromptEngine
 from llm_markdown_generator.front_matter import FrontMatterGenerator
 from llm_markdown_generator.generator import MarkdownGenerator
-from llm_markdown_generator.token_tracker import TokenTracker
 from llm_markdown_generator.plugins import load_plugins
 
 
@@ -50,15 +49,12 @@ def main():
     if args.keywords:
         context["keywords"] = [kw.strip() for kw in args.keywords.split(",")]
     
-    # Set up token tracker
-    token_tracker = TokenTracker()
     
     # Create LLM provider
     llm_client = create_llm_provider(
         provider_type=config.provider_type,
         model_name=config.model_name,
-        api_key=os.getenv(f"{config.provider_type.upper()}_API_KEY"),
-        token_tracker=token_tracker
+        api_key=os.getenv(f"{config.provider_type.upper()}_API_KEY")
     )
     
     # Create prompt engine with specified template
@@ -110,14 +106,7 @@ def main():
     print(f"Output file: {output_path}")
     
     if args.verbose:
-        print("\nToken Usage:")
-        print(f"  Prompt tokens: {token_tracker.prompt_tokens}")
-        print(f"  Completion tokens: {token_tracker.completion_tokens}")
-        print(f"  Total tokens: {token_tracker.total_tokens}")
-        
-        # Calculate cost if available
-        if token_tracker.estimated_cost is not None:
-            print(f"  Estimated cost: ${token_tracker.estimated_cost:.6f}")
+        print("\nGeneration complete")
 
 
 if __name__ == "__main__":
