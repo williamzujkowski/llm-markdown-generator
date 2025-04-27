@@ -359,8 +359,8 @@ class MarkdownGenerator:
             if not filename.endswith(".md"):
                 filename = f"{filename}.md"
 
-            # Write to file
-            file_path = output_dir / filename
+            # Write to file using the determined path and filename
+            file_path = output_dir_path / filename
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
 
