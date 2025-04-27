@@ -43,6 +43,64 @@ console = Console()
 app = typer.Typer(help="Generate markdown blog posts using LLMs")
 
 
+# --- Shared Mock Provider for Dry Runs ---
+
+class MockProvider(LLMProvider):
+    """A mock LLM provider for dry runs that doesn't make API calls."""
+    def __init__(self, provider_type: str = "mock", model_name: str = "mock-model", topic: str = "generic", *args: Any, **kwargs: Any) -> None:
+        super().__init__()
+        # Store mock data
+        self.mock_model = model_name
+        self.mock_provider = provider_type
+        self.topic = topic # Store topic for more specific mock responses
+
+    def generate_text(self, prompt: str) -> str:
+        """Mock implementation that doesn't make API calls."""
+        console.print("[yellow]DRY RUN: Would call LLM API here[/yellow]")
+        console.print(f"[dim]Provider: {self.mock_provider}, Model: {self.mock_model}[/dim]")
+        console.print(f"[dim]Prompt length: {len(prompt)} characters[/dim]")
+
+        # Generate a slightly more specific mock response based on topic/prompt
+        import re
+        cve_match = re.search(r'(CVE-\d{4}-\d+)', self.topic) # Check if topic is a CVE ID
+        current_cve = cve_match.group(1) if cve_match else None
+
+        if current_cve:
+            # Mock response for CVE reports
+            return f"""### Mock Report for {current_cve}
+
+#### Vulnerability Snapshot (Mock Data)
+- **CVE ID**: {current_cve}
+- **CVSS Score**: 9.8 (Critical)
+- **EPSS Score**: 0.95 (High)
+- **Affected Products**: Mock Product Suite
+
+#### Technical Details (Mock)
+This is a mock technical description for {current_cve}. The actual report would detail the vulnerability.
+
+#### Mitigation (Mock)
+- Apply mock patches.
+- Implement mock workarounds.
+"""
+        else:
+            # Generic mock response
+            return f"""# Mock Response for "{self.topic}"
+
+This is a mock response for a dry run. No API call was made.
+
+## Sample Content
+
+This is what content would be generated if this were a real API call.
+
+## Mock Details
+
+- Provider: {self.mock_provider}
+- Model: {self.mock_model}
+- Topic: {self.topic}
+"""
+
+# --- CLI Commands ---
+
 @app.command()
 def generate(
     topic: str = typer.Argument(..., help="The topic to generate content for"),
@@ -132,45 +190,12 @@ def generate(
         model_name = model or config.llm_provider.model_name
         
         if dry_run:
-            # Create a mock LLM provider that doesn't make API calls
-            class MockProvider(LLMProvider):
-                def __init__(self, provider_type: str = "mock", model_name: str = "mock-model", *args: Any, **kwargs: Any) -> None:
-                    super().__init__()
-                    # For mock provider, set up the environment variable first
-                    import os
-                    os.environ['MOCK_API_KEY'] = 'mock-key-for-dry-run'
-                    # Store mock data
-                    self.mock_model = model_name
-                    self.mock_provider = provider_type
-                
-                def generate_text(self, prompt: str) -> str:
-                    """Mock implementation that doesn't make API calls."""
-                    console.print("[yellow]DRY RUN: Would call LLM API here[/yellow]")
-                    console.print(f"[dim]Provider: {self.mock_provider}, Model: {self.mock_model}[/dim]")
-                    console.print(f"[dim]Prompt length: {len(prompt)} characters[/dim]")
-                    
-                    return f"""# Mock Response for "{topic}"
-
-This is a mock response for a dry run. No API call was made.
-
-## Sample Content
-
-This is what content would be generated if this were a real API call.
-
-## Mock Details
-
-- Provider: {self.mock_provider}
-- Model: {self.mock_model}
-- Topic: {topic}
-- Configuration: Using {config_path}
-"""
-            
-            # Create the mock provider
+            # Use the shared MockProvider for dry runs
             llm_provider = MockProvider(
                 provider_type=llm_provider_type,
-                model_name=model_name
+                model_name=model_name,
+                topic=topic # Pass topic for better mock response
             )
-            
             console.print(f"[yellow]DRY RUN: Using mock provider ({llm_provider_type})[/yellow]")
         else:
             # Create the actual LLM provider
@@ -424,80 +449,13 @@ def generate_cve_report(
         model_name = model or config.llm_provider.model_name
         
         if dry_run:
-            # Create a mock LLM provider that doesn't make API calls
-            class MockProvider(OpenAIProvider):
-                def __init__(self, *args, **kwargs):
-                    # For mock provider, set up the environment variable first
-                    import os
-                    os.environ['MOCK_API_KEY'] = 'mock-key-for-dry-run'
-                    # Call parent init with minimal parameters
-                    super().__init__(
-                        model_name=kwargs.get('model_name', 'mock-model'),
-                        api_key_env_var='MOCK_API_KEY',
-                    )
-                    # Override with mock data
-                    self.mock_model = kwargs.get('model_name', 'mock-model')
-                    self.mock_provider = kwargs.get('provider_type', 'mock')
-                
-                def generate_text(self, prompt):
-                    """Mock implementation that doesn't make API calls."""
-                    console.print("[yellow]DRY RUN: Would call LLM API here[/yellow]")
-                    console.print(f"[dim]Provider: {self.mock_provider}, Model: {self.mock_model}[/dim]")
-                    console.print(f"[dim]Prompt length: {len(prompt)} characters[/dim]")
-                    
-                    # Extract the CVE ID from the prompt
-                    import re
-                    cve_match = re.search(r'CVE-\d{4}-\d+', prompt)
-                    current_cve = cve_match.group(0) if cve_match else "CVE-XXXX-XXXXX"
-                    
-                    return f"""### {current_cve}: Critical Remote Code Execution Vulnerability
-
-#### Vulnerability Snapshot
-- **CVE ID**: [{current_cve}](https://www.cve.org/CVERecord?id={current_cve})
-- **CVSS Score**: 9.8 ([CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H](https://www.first.org/cvss/calculator/3.1#CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H))
-- **CVSS Severity**: Critical
-- **EPSS Score**: [0.85](https://epss.cyentia.com/) (85% probability of exploitation)
-- **CWE Category**: [CWE-787](https://cwe.mitre.org/data/definitions/787.html) (Out-of-bounds Write)
-- **Affected Products**: [Example Product 1.0 - 3.2](https://example.com/products)
-- **Vulnerability Type**: Remote Code Execution
-- **Patch Availability**: [Yes](https://example.com/security/advisory)
-- **Exploitation Status**: [PoC Available](https://example.com/security/disclosures)
-
-#### Technical Details
-This is a mock CVE report for {current_cve}. In a real run, this would contain detailed information about this vulnerability, including a technical description, attack vectors, and root cause analysis.
-
-#### Exploitation Context
-At present, multiple security researchers have developed proof-of-concept exploits demonstrating the vulnerability. While no active exploitation has been confirmed, scanning activity has increased.
-
-#### Impact Assessment
-This vulnerability allows attackers to gain unauthorized access to affected systems, resulting in:
-
-- Complete control over the vulnerable system
-- Ability to access, modify, or destroy data
-- Potential for lateral movement to connected systems
-
-#### Mitigation and Remediation
-- Apply vendor patches immediately
-- If patching is not immediately possible:
-  - Implement network segmentation
-  - Enable MFA for all administrative access
-  - Monitor logs for suspicious activity
-- Detection methods:
-  - Monitor for unusual authentication events
-  - Watch for unexpected system activities
-
-#### References
-- [Vendor Security Advisory](https://example.com/security/advisory)
-- [NIST NVD Entry](https://nvd.nist.gov/vuln/detail/{current_cve})
-- [Security Researcher Blog](https://example.com/security/blog)
-"""
-            
-            # Create the mock provider
+            # Use the shared MockProvider for dry runs
+            # We pass the first CVE ID as the 'topic' for the mock response generator
             llm_provider = MockProvider(
                 provider_type=llm_provider_type,
-                model_name=model_name
+                model_name=model_name,
+                topic=cve_ids[0] if cve_ids else "cve-report" # Use first CVE for mock context
             )
-            
             console.print(f"[yellow]DRY RUN: Using mock provider ({llm_provider_type})[/yellow]")
         else:
             # Create the actual LLM provider
@@ -716,83 +674,12 @@ def enhanced_cve_report(
         model_name = model or config.llm_provider.model_name
         
         if dry_run:
-            # Create a mock LLM provider that doesn't make API calls
-            class MockProvider(LLMProvider):
-                def __init__(self, provider_type: str = "mock", model_name: str = "mock-model", *args: Any, **kwargs: Any) -> None:
-                    super().__init__()
-                    # For mock provider, set up the environment variable first
-                    import os
-                    os.environ['MOCK_API_KEY'] = 'mock-key-for-dry-run'
-                    # Store mock data
-                    self.mock_model = model_name
-                    self.mock_provider = provider_type
-                
-                def generate_text(self, prompt: str) -> str:
-                    """Mock implementation that doesn't make API calls."""
-                    console.print("[yellow]DRY RUN: Would call LLM API here[/yellow]")
-                    console.print(f"[dim]Provider: {self.mock_provider}, Model: {self.mock_model}[/dim]")
-                    console.print(f"[dim]Prompt length: {len(prompt)} characters[/dim]")
-                    
-                    return f"""### {cve_id}: Critical Remote Code Execution Vulnerability in "ExampleCorp SecureFile Transfer Application"
-
-#### Vulnerability Snapshot
-- **CVE ID**: [{cve_id}](https://www.cve.org/CVERecord?id={cve_id})
-- **CVSS Score**: 9.8 ([CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H](https://www.first.org/cvss/calculator/3.1#CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H))
-- **CVSS Severity**: Critical
-- **EPSS Score**: [0.92](https://epss.cyentia.com/) (92% probability of exploitation)
-- **CWE Category**: [CWE-787](https://cwe.mitre.org/data/definitions/787.html) (Out-of-bounds Write)
-- **Affected Products**: ExampleCorp SecureFile Transfer Application v3.0 - v3.5 ([Vendor Advisory](https://examplecorp.com/security-advisories/ESA-2024-001))
-- **Vulnerability Type**: Remote Code Execution (RCE)
-- **Patch Availability**: [Yes](https://examplecorp.com/downloads/securefile-transfer)
-- **Exploitation Status**: [PoC Available](https://github.com/security-researcher/CVE-2024-29896-PoC)
-
-
-#### Technical Details
-{cve_id} is a critical remote code execution vulnerability affecting ExampleCorp's SecureFile Transfer Application. The vulnerability stems from an out-of-bounds write condition within the application's file processing module. Specifically, a specially crafted file name can trigger a buffer overflow, allowing an attacker to overwrite critical memory regions and inject malicious code.
-
-The vulnerability exists due to insufficient bounds checking when parsing filenames provided during file upload requests. An attacker can exploit this flaw by sending a specially crafted filename exceeding the allocated buffer size. This overwrite allows the attacker to control the instruction pointer and execute arbitrary code within the context of the application.
-
-#### Exploitation Context
-A proof-of-concept exploit for {cve_id} has been publicly released and is actively being shared within security communities. While widespread exploitation has not yet been confirmed, the ease of exploitation combined with the availability of a public PoC significantly increases the likelihood of imminent attacks.
-
-Given the high EPSS score of 0.92 and the nature of the vulnerability, active exploitation is expected within 24-48 hours. The vulnerability is remotely exploitable without authentication, making it a prime target for automated attacks. Organizations using the affected versions of ExampleCorp SecureFile Transfer Application are strongly urged to apply available patches immediately.
-
-#### Impact Assessment
-Successful exploitation of {cve_id} could have severe consequences, including:
-
-- **Complete system compromise:** Attackers can gain full control of the affected server.
-- **Data breaches:** Sensitive data transferred through the application could be exfiltrated.
-- **Denial of Service:** Attackers could disrupt the availability of the file transfer service.
-- **Lateral movement:** Compromised servers can be used as a pivot point for attacks on other internal systems.
-
-The severity of the impact is compounded by the fact that the application is often used to transfer sensitive files, potentially leading to significant data breaches and reputational damage.
-
-#### Mitigation and Remediation
-- **Apply patches immediately:** Upgrade to the latest version of ExampleCorp SecureFile Transfer Application (v3.6 or later) available at [https://examplecorp.com/downloads/securefile-transfer](https://examplecorp.com/downloads/securefile-transfer).
-- **Workarounds (if patching is not immediately possible):**
-    - Disable the affected application if it is not essential.
-    - Implement strict network access controls to limit access to the application only to trusted sources.
-    - Monitor application logs for suspicious activity.
-- **Configuration changes:** None required after patching.
-- **Detection methods:**
-    - Monitor system logs for unusual process creation or network activity.
-    - Implement intrusion detection/prevention systems (IDS/IPS) with signatures designed to detect exploitation attempts. ExampleCorp has released a set of Snort rules for this vulnerability.
-    - Analyze network traffic for malicious payloads associated with the exploit.
-
-
-#### References
-- [ExampleCorp Security Advisory ESA-2024-001](https://examplecorp.com/security-advisories/ESA-2024-001)
-- [CVE-2024-29896 NVD Entry](https://nvd.nist.gov/vuln/detail/{cve_id}) (Placeholder - will be populated when the CVE is officially published)
-- [GitHub Repository with PoC Exploit](https://github.com/security-researcher/{cve_id}-PoC) (Fictional example)
-- [Snort Rules for {cve_id}](https://examplecorp.com/security-resources/snort-rules) (Fictional example)
-"""
-            
-            # Create the mock provider
+            # Use the shared MockProvider for dry runs
             llm_provider = MockProvider(
                 provider_type=llm_provider_type,
-                model_name=model_name
+                model_name=model_name,
+                topic=cve_id # Pass CVE ID as topic for mock response
             )
-            
             console.print(f"[yellow]DRY RUN: Using mock provider ({llm_provider_type})[/yellow]")
         else:
             # Create the actual LLM provider with token tracker
