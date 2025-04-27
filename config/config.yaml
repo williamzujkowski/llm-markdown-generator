@@ -2,26 +2,26 @@
 
 # LLM Provider Configuration
 # Note: You can use either OpenAI or Gemini as the provider
-# Default configuration (OpenAI)
+# Default configuration (Gemini)
 llm_provider:
-  provider_type: "openai"  # Options: "openai" or "gemini"
-  model_name: "gpt-4"     # OpenAI model to use
-  api_key_env_var: "OPENAI_API_KEY"  # The environment variable containing your API key
+  provider_type: "gemini"  # Options: "openai" or "gemini"
+  model_name: "gemini-1.5-pro"  # Gemini model to use
+  api_key_env_var: "GEMINI_API_KEY"    # The environment variable containing your API key
   temperature: 0.7       # Controls randomness in output (0.0-1.0)
-  max_tokens: 1000       # Maximum tokens to generate
+  max_tokens: 4000       # Maximum tokens to generate
   additional_params:     # Additional parameters to pass to the API
-    top_p: 0.9
+    topK: 40
+    topP: 0.95
 
-# Alternative Gemini configuration:
+# Alternative OpenAI configuration:
 # llm_provider:
-#   provider_type: "gemini"
-#   model_name: "gemini-1.0-pro-latest"  # Gemini model to use
-#   api_key_env_var: "GEMINI_API_KEY"    # The environment variable containing your API key
+#   provider_type: "openai"
+#   model_name: "gpt-4"     # OpenAI model to use
+#   api_key_env_var: "OPENAI_API_KEY"  # The environment variable containing your API key
 #   temperature: 0.7
 #   max_tokens: 1000
 #   additional_params:
-#     topK: 40
-#     topP: 0.95
+#     top_p: 0.9
 
 # Front Matter Configuration
 front_matter:

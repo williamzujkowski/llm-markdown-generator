@@ -425,14 +425,16 @@ This is what content would be generated if this were a real API call.
 
 @app.command()
 def generate_cve_report(
-    cve_id: str = typer.Argument(..., help="The CVE identifier (e.g., CVE-2024-45410)"),
+    cve_ids: List[str] = typer.Argument(..., help="One or more CVE identifiers (e.g., CVE-2024-45410 CVE-2023-1234)"),
     config_path: str = typer.Option(
         "config/config.yaml", help="Path to the configuration file"
     ),
     output_dir: Optional[str] = typer.Option(
         None, help="Output directory (overrides the one in config)"
     ),
-    title: Optional[str] = typer.Option(None, help="Title for the CVE report"),
+    title_prefix: Optional[str] = typer.Option(
+        "Security Advisory", help="Prefix for the report titles"
+    ),
     provider: Optional[str] = typer.Option(
         None, help="Override the LLM provider (openai or gemini)"
     ),
@@ -461,7 +463,7 @@ def generate_cve_report(
         False, "--usage-report", help="Show detailed token usage report at the end"
     ),
 ) -> None:
-    """Generate a comprehensive security advisory for the specified CVE."""
+    """Generate comprehensive security advisories for the specified CVE IDs."""
     try:
         # Set up token tracker
         token_tracker = TokenTracker(log_path=token_log_path)
@@ -521,28 +523,51 @@ def generate_cve_report(
                     console.print(f"[dim]Provider: {self.mock_provider}, Model: {self.mock_model}[/dim]")
                     console.print(f"[dim]Prompt length: {len(prompt)} characters[/dim]")
                     
-                    return f"""# Security Advisory: {cve_id}
+                    # Extract the CVE ID from the prompt
+                    import re
+                    cve_match = re.search(r'CVE-\d{4}-\d+', prompt)
+                    current_cve = cve_match.group(0) if cve_match else "CVE-XXXX-XXXXX"
+                    
+                    return f"""### {current_cve}: Critical Remote Code Execution Vulnerability
 
-## Executive Summary
+#### Vulnerability Snapshot
+- **CVE ID**: [{current_cve}](https://www.cve.org/CVERecord?id={current_cve})
+- **CVSS Score**: 9.8 ([CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H](https://www.first.org/cvss/calculator/3.1#CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H))
+- **CVSS Severity**: Critical
+- **EPSS Score**: [0.85](https://epss.cyentia.com/) (85% probability of exploitation)
+- **CWE Category**: [CWE-787](https://cwe.mitre.org/data/definitions/787.html) (Out-of-bounds Write)
+- **Affected Products**: [Example Product 1.0 - 3.2](https://example.com/products)
+- **Vulnerability Type**: Remote Code Execution
+- **Patch Availability**: [Yes](https://example.com/security/advisory)
+- **Exploitation Status**: [PoC Available](https://example.com/security/disclosures)
 
-This is a mock CVE report for {cve_id}. In a real run, this would contain detailed information about this vulnerability.
+#### Technical Details
+This is a mock CVE report for {current_cve}. In a real run, this would contain detailed information about this vulnerability, including a technical description, attack vectors, and root cause analysis.
 
-## Vulnerability Snapshot
+#### Exploitation Context
+At present, multiple security researchers have developed proof-of-concept exploits demonstrating the vulnerability. While no active exploitation has been confirmed, scanning activity has increased.
 
-| CVE ID | CVSS Score | EPSS Score | Affected Systems | Patch Status |
-|--------|------------|------------|------------------|--------------|
-| {cve_id} | 9.8 (Critical) | 0.76 (High) | Example Systems | Available |
+#### Impact Assessment
+This vulnerability allows attackers to gain unauthorized access to affected systems, resulting in:
 
-## Technical Details
+- Complete control over the vulnerable system
+- Ability to access, modify, or destroy data
+- Potential for lateral movement to connected systems
 
-This is a mock report generated in dry-run mode.
+#### Mitigation and Remediation
+- Apply vendor patches immediately
+- If patching is not immediately possible:
+  - Implement network segmentation
+  - Enable MFA for all administrative access
+  - Monitor logs for suspicious activity
+- Detection methods:
+  - Monitor for unusual authentication events
+  - Watch for unexpected system activities
 
-## Mitigation Steps
-
-1. Update affected systems
-2. Apply security patches
-3. Monitor for suspicious activity
-
+#### References
+- [Vendor Security Advisory](https://example.com/security/advisory)
+- [NIST NVD Entry](https://nvd.nist.gov/vuln/detail/{current_cve})
+- [Security Researcher Blog](https://example.com/security/blog)
 """
                 
                 def get_token_usage(self):
@@ -605,75 +630,120 @@ This is a mock report generated in dry-run mode.
             front_matter_generator=front_matter_generator,
         )
         
-        # Prepare custom parameters
-        report_title = title or f"Security Advisory: {cve_id} - Critical Vulnerability Report"
-        custom_params = {
-            "topic": cve_id,
-            "title": report_title,
-            "audience": "security professionals and IT administrators",
-            "keywords": ["cybersecurity", "vulnerability", "CVSS", "EPSS", "mitigation", "remediation", cve_id],
-        }
-        
-        # Create a temporary topic config for security advisory
+        # Set up the temporary topic config for security advisory
         topic_name = "security_advisory"
-        # Convert any sequence type to list for TopicConfig
-        keywords = list(custom_params["keywords"]) if "keywords" in custom_params else []
-        config.topics[topic_name] = TopicConfig(
-            name=topic_name,
-            prompt_template="security_advisory.j2",
-            keywords=keywords,
-            custom_data={}
-        )
-
-        # Generate content
-        with console.status(f"Generating CVE report for: [bold]{cve_id}[/bold] using [bold]{llm_provider_type}/{model_name}[/bold]..."):
-            start_time = datetime.now()
-            content = generator.generate_content(topic_name, custom_params)
-            end_time = datetime.now()
-            generation_time = (end_time - start_time).total_seconds()
-
-        # Get token usage information
-        token_usage = llm_provider.get_token_usage()
         
-        # Record token usage
-        token_tracker.record_usage(
-            token_usage=token_usage,
-            provider=llm_provider_type,
-            model=model_name,
-            operation="generate_cve_report",
-            topic=cve_id,
-            metadata={
+        # Create a report for each CVE ID
+        successful_reports = []
+        failed_reports = []
+        total_token_usage = TokenUsage()
+        
+        console.print(f"Generating reports for [bold cyan]{len(cve_ids)}[/bold cyan] CVE IDs")
+        
+        for cve_id in cve_ids:
+            console.print(f"\n[bold]Processing: {cve_id}[/bold]")
+            
+            # Set a specific title for this CVE
+            report_title = f"{title_prefix}: {cve_id} - Critical Vulnerability Report"
+            
+            # Prepare custom parameters for this CVE
+            custom_params = {
+                "topic": cve_id,
                 "title": report_title,
-                "generation_time": generation_time,
-                "dry_run": dry_run
+                "audience": "security professionals and IT administrators",
+                "keywords": ["cybersecurity", "vulnerability", "CVSS", "EPSS", "mitigation", "remediation", cve_id],
             }
-        )
+            
+            # Update topic config for this CVE
+            keywords = list(custom_params["keywords"]) if "keywords" in custom_params else []
+            config.topics[topic_name] = TopicConfig(
+                name=topic_name,
+                prompt_template="security_advisory.j2",
+                keywords=keywords,
+                custom_data={}
+            )
+            
+            try:
+                # Generate content for this CVE
+                with console.status(f"Generating report for: [bold]{cve_id}[/bold] using [bold]{llm_provider_type}/{model_name}[/bold]..."):
+                    start_time = datetime.now()
+                    content = generator.generate_content(topic_name, custom_params)
+                    end_time = datetime.now()
+                    generation_time = (end_time - start_time).total_seconds()
+                
+                # Get token usage information for this CVE
+                token_usage = llm_provider.get_token_usage()
+                
+                # Record token usage for this CVE
+                token_tracker.record_usage(
+                    token_usage=token_usage,
+                    provider=llm_provider_type,
+                    model=model_name,
+                    operation="generate_cve_report",
+                    topic=cve_id,
+                    metadata={
+                        "title": report_title,
+                        "generation_time": generation_time,
+                        "dry_run": dry_run
+                    }
+                )
+                
+                # Update total token usage
+                total_token_usage.prompt_tokens += token_usage.prompt_tokens
+                total_token_usage.completion_tokens += token_usage.completion_tokens
+                total_token_usage.total_tokens += token_usage.total_tokens
+                if total_token_usage.cost is None:
+                    total_token_usage.cost = 0
+                if token_usage.cost is not None:
+                    total_token_usage.cost += token_usage.cost
+                
+                if dry_run:
+                    console.print("[yellow]DRY RUN: Would write content to file[/yellow]")
+                    # Print a preview of the content
+                    content_preview = "\n".join(content.split("\n")[:10]) + "\n..."
+                    console.print(f"[dim]Content preview:[/dim]\n{content_preview}")
+                else:
+                    # Write to file with CVE-specific filename
+                    output_path = generator.write_to_file(content, title=f"{cve_id.lower()}-vulnerability-report")
+                    console.print(f"[green]Report written to:[/green] {output_path}")
+                    successful_reports.append({"cve_id": cve_id, "path": output_path})
+                
+                # Show brief token usage for this CVE if verbose
+                if verbose:
+                    console.print(f"Tokens: {token_usage.total_tokens} | Time: {generation_time:.2f}s")
+            
+            except Exception as e:
+                console.print(f"[red]Error generating report for {cve_id}:[/red] {str(e)}")
+                failed_reports.append({"cve_id": cve_id, "error": str(e)})
+                if verbose:
+                    import traceback
+                    console.print(traceback.format_exc())
         
-        if dry_run:
-            console.print("[yellow]DRY RUN: Would write content to file[/yellow]")
-            # Print a preview of the content
-            content_preview = content.split("\n\n")[0] + "\n..."
-            console.print(f"[dim]Content preview:[/dim]\n{content_preview}")
-        else:
-            # Write to file
-            output_path = generator.write_to_file(content, title=report_title)
-            console.print(f"[green]CVE report written to:[/green] {output_path}")
+        # Print summary of all reports
+        console.print("\n[bold]Report Generation Summary:[/bold]")
+        if successful_reports:
+            console.print(f"[green]Successfully generated {len(successful_reports)} reports:[/green]")
+            for report in successful_reports:
+                console.print(f"  - {report['cve_id']}")
+        
+        if failed_reports:
+            console.print(f"[red]Failed to generate {len(failed_reports)} reports:[/red]")
+            for report in failed_reports:
+                console.print(f"  - {report['cve_id']}: {report['error']}")
         
         # Show token usage details
-        tokens_table = Table(title="Token Usage Information")
+        tokens_table = Table(title="Total Token Usage Information")
         tokens_table.add_column("Metric", style="cyan")
         tokens_table.add_column("Value", style="green")
         
         tokens_table.add_row("Provider", llm_provider_type)
         tokens_table.add_row("Model", model_name)
-        tokens_table.add_row("Prompt tokens", str(token_usage.prompt_tokens))
-        tokens_table.add_row("Completion tokens", str(token_usage.completion_tokens))
-        tokens_table.add_row("Total tokens", str(token_usage.total_tokens))
+        tokens_table.add_row("Total prompt tokens", str(total_token_usage.prompt_tokens))
+        tokens_table.add_row("Total completion tokens", str(total_token_usage.completion_tokens))
+        tokens_table.add_row("Total tokens", str(total_token_usage.total_tokens))
         
-        if token_usage.cost is not None:
-            tokens_table.add_row("Estimated cost", f"${token_usage.cost:.6f}")
-        
-        tokens_table.add_row("Generation time", f"{generation_time:.2f} seconds")
+        if total_token_usage.cost is not None:
+            tokens_table.add_row("Estimated total cost", f"${total_token_usage.cost:.6f}")
         
         if verbose or show_usage_report:
             console.print(tokens_table)

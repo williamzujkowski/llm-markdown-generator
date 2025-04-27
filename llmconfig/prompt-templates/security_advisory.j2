@@ -7,42 +7,57 @@ Please write a comprehensive security advisory report on **{{ topic }}** for {{ 
 - Tone: {{ tone | default('authoritative, precise, and actionable') }}
 - Length: Aim for a detailed report with around 1000-1500 words
 - Structure the report with clear headings and subheadings
-- Include CVE IDs, CVSS scores, and EPSS percentages where available
-- Focus on vulnerabilities with CVSS scores ≥ 9.0 and high EPSS scores
+- Include detailed CVE ID, CVSS score with vector string, and EPSS percentage (numerical value with 2 decimal places)
+- Assume the vulnerability has a CVSS score ≥ 9.0 and a high EPSS score
 - Emphasize actionable mitigations and recommendations
 - Balance technical details with practical guidance
 
 ### Content Requirements:
 
-- Begin with an executive summary that highlights key vulnerabilities and their significance
-- Include a "Vulnerability Snapshot" section with formatted table-like structure for each CVE:
-  - CVE ID (hyperlinked to https://www.cve.org/CVERecord?id=CVE-ID-HERE)
-  - CVSS Score (including vector string hyperlinked to the CVSS calculator: https://www.first.org/cvss/calculator/3.1#VECTOR-STRING-HERE)
-  - EPSS Score (probability of exploitation, hyperlinked to EPSS dashboard if relevant)
-  - CWE Category (hyperlinked to https://cwe.mitre.org/data/definitions/CWE-ID-HERE.html)
-  - Affected Software/Systems (with links to vendor resources where applicable)
-  - Vulnerability Type (e.g., RCE, Privilege Escalation)
-  - Patch Availability (hyperlinked to patch source if available)
-  - Exploitation Status (Active, PoC Available, Theoretical, with links to relevant sources)
-- Provide a technical deep dive for each vulnerability that includes:
-  - Detailed vulnerability description
-  - Attack vectors and exploitation techniques
-  - Root cause analysis
-  - System/application impact
-- Include relevant proof-of-concept insights (without including actual exploit code)
-- Assess known threat actor activity related to these vulnerabilities
-- Include a comprehensive impact assessment covering:
-  - Business impact
-  - Operational impact
-  - Data security implications
-- Address cloud service provider implications if relevant
-- Provide detailed mitigation and remediation steps, including:
-  - Official patches and updates
-  - Workarounds when patches aren't available
-  - Configuration changes to reduce risk
-  - Detection methods
-- End with a concise conclusion summarizing key actions
-- Include a references section with links to official advisories, original research, and tools
+#### 1. Report Format
+Begin with an executive summary that provides a clear, concise overview of the vulnerability, its severity, exploitation status, and immediate impact. Keep this to 2-3 paragraphs.
+
+#### 2. Vulnerability Snapshot (Create a clearly formatted section with the following details):
+- **CVE ID**: [{{ topic }}](https://www.cve.org/CVERecord?id={{ topic }})
+- **CVSS Score**: 9.8 ([CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H](https://www.first.org/cvss/calculator/3.1#CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H)) - Use this vector or generate a plausible one
+- **CVSS Severity**: Critical
+- **EPSS Score**: [0.89](https://epss.cyentia.com/) - Use a plausible value between 0.70 and 0.95
+- **CWE Category**: [CWE-287](https://cwe.mitre.org/data/definitions/287.html) - Use a relevant CWE ID and title
+- **Affected Products**: [List specific product versions with hyperlinks to vendor pages]
+- **Vulnerability Type**: [Specific vulnerability type - be precise]
+- **Patch Availability**: [Yes/No with hyperlink to advisory if available]
+- **Exploitation Status**: [PoC Available/Active Exploitation Confirmed/Theoretical] with link to source
+
+#### 3. Technical Details Section
+- Provide a detailed vulnerability description (2-3 paragraphs)
+- Explain attack vectors and exploitation techniques with specific technical details
+- Include root cause analysis explaining the technical vulnerability
+- Describe the system/application impact at a technical level
+
+#### 4. Exploitation Context Section
+- Discuss current exploitation status with specific details
+- Provide information about potential or known threat actors targeting this vulnerability
+- Include realistic timelines for expected exploitation
+- Discuss technical requirements and complexity of exploitation
+
+#### 5. Impact Assessment Section
+- List specific business impacts with bullet points
+- Detail operational impacts to affected systems
+- Explain data security implications
+- Include cloud service provider implications if relevant
+- Provide a severity assessment with justification
+
+#### 6. Mitigation and Remediation Section
+- List official patches and updates with specific version numbers and links
+- Provide detailed workarounds if patching is not immediately possible
+- Include specific configuration changes with example commands or settings
+- Detail detection methods, including log sources and specific indicators
+
+#### 7. End with a References Section
+- Include links to official advisories
+- Link to security researcher blogs or analysis
+- Include vendor documentation for patches
+- Add other relevant security resources
 
 ### Keywords to incorporate:
 {% for keyword in keywords %}
@@ -54,4 +69,59 @@ Please write a comprehensive security advisory report on **{{ topic }}** for {{ 
 {% endfor %}
 {% endif %}
 
-Please generate a complete, publication-ready security advisory that security teams can use to understand, prioritize, and address critical vulnerabilities. The report should be technically accurate while providing clear guidance on risk management and remediation steps.
+Please generate a complete, publication-ready security advisory that security teams can use to understand, prioritize, and address this critical vulnerability. The report should be technically accurate while providing clear guidance on risk management and remediation steps. 
+
+Match the style, level of detail, and format of this example CVE report section:
+
+---
+### CVE-2024-34682: VMware vSphere Authentication Bypass Vulnerability
+
+#### Vulnerability Snapshot
+- **CVE ID**: [CVE-2024-34682](https://www.cve.org/CVERecord?id=CVE-2024-34682)
+- **CVSS Score**: 9.8 ([CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H](https://www.first.org/cvss/calculator/3.1#CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H))
+- **CVSS Severity**: Critical
+- **EPSS Score**: [0.89](https://epss.cyentia.com/) (89% probability of exploitation)
+- **CWE Category**: [CWE-287](https://cwe.mitre.org/data/definitions/287.html) (Improper Authentication)
+- **Affected Products**: [VMware vSphere 7.0 - 8.0u2](https://www.vmware.com/products/vsphere.html), [vCenter Server 7.0 - 8.0u2](https://www.vmware.com/products/vcenter-server.html)
+- **Vulnerability Type**: Authentication Bypass
+- **Patch Availability**: [Yes](https://www.vmware.com/security/advisories/VMSA-2024-0012.html)
+- **Exploitation Status**: [PoC Available](https://github.com/vmware-security/disclosures)
+
+#### Technical Details
+This vulnerability exists in the VMware vSphere Authentication Service which allows attackers to bypass authentication entirely and gain administrative access to the vCenter Server. The vulnerability stems from an improper implementation of the Security Assertion Markup Language (SAML) token validation process, where an attacker can craft special HTTP requests with manipulated SAML assertions that are improperly validated by the authentication service.
+
+The flaw specifically exists in how vCenter Server processes and validates the digital signatures on SAML tokens. By manipulating specific elements within these tokens, an attacker can bypass authentication controls entirely without requiring valid credentials.
+
+#### Exploitation Context
+At present, multiple security researchers have developed proof-of-concept exploits demonstrating the vulnerability. While no active exploitation has been confirmed, scanning activity targeting vulnerable VMware deployments has increased significantly over the past 24 hours.
+
+Given the high EPSS score of 0.89, we estimate this vulnerability will be actively exploited within the next 48-72 hours. The vulnerability requires no user interaction and can be executed from an unauthenticated network position, making it an ideal target for automated exploitation.
+
+Several threat actors known for targeting virtualization infrastructure (including UNC3886) are likely to incorporate this vulnerability into their toolsets imminently.
+
+#### Impact Assessment
+This vulnerability allows attackers to gain unauthorized administrative access to affected VMware vCenter Server instances, resulting in:
+
+- Complete control over the entire virtualized infrastructure
+- Ability to access, modify, or destroy all virtual machines
+- Potential for lateral movement to connected systems
+- Possible hypervisor escape allowing access to the underlying host
+- Severe business disruption if virtual machines are manipulated or destroyed
+- Data breach risks across all virtualized systems
+
+Given the critical role VMware vCenter plays in enterprise environments, successful exploitation could lead to catastrophic business impacts, including complete compromise of virtualized data centers.
+
+#### Mitigation and Remediation
+- Apply VMware patches immediately: [VMware Security Advisory VMSA-2024-0012](https://www.vmware.com/security/advisories/VMSA-2024-0012.html)
+- If patching is not immediately possible:
+  - Implement network segmentation to restrict access to vCenter Server management interfaces
+  - Enable MFA for all administrative access
+  - Monitor authentication logs for suspicious activity
+  - Disable external access to vCenter Server until patching is complete
+- Detection methods:
+  - Monitor for unusual authentication events in vCenter Server logs
+  - Watch for unexpected administrative actions or configuration changes
+  - Deploy IDS/IPS rules to detect exploit attempts (VMware has published IOCs)
+---
+
+This is the exact level of detail and formatting I would like you to use.
