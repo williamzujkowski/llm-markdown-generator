@@ -255,7 +255,8 @@ class MarkdownGenerator:
                         "front_matter": enhanced_front_matter_data, # Pass the current Pydantic model
                         "content": content_body, # Pass the raw content body
                         "topic": topic_name,
-                        **custom_params # Pass all custom params
+                        # Filter custom_params before spreading to avoid conflicts/confusion
+                        **{k: v for k, v in custom_params.items() if k not in ('front_matter', 'content', 'topic')}
                     }
 
                     # Call the enhancer plugin
@@ -304,7 +305,8 @@ class MarkdownGenerator:
                         "content": processed_content, # Pass the current combined content string
                         "topic": topic_name,
                         "front_matter_data": enhanced_front_matter_data, # Pass the final Pydantic model
-                        **custom_params # Pass all custom params
+                        # Filter custom_params before spreading to avoid conflicts/confusion
+                        **{k: v for k, v in custom_params.items() if k not in ('content', 'topic', 'front_matter_data')}
                     }
 
                     # Call the processor plugin

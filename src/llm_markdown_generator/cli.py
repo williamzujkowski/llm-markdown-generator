@@ -723,19 +723,9 @@ def enhanced_cve_report(
         # Prepare default title if not provided
         if not title:
             title = f"{cve_id}: Critical Vulnerability Assessment"
-            
-        # Prepare front matter with initial values
-        # The CVE enhancer plugin will extract and add more fields from the generated content
-        front_matter_data = {
-            "title": title,
-            "cveId": cve_id,
-            "publishDate": datetime.now().strftime("%Y-%m-%d"),
-            "cvssSeverity": severity,
-            "tags": ["cybersecurity", "vulnerability", "CVE", cve_id],
-            "author": "AI Content Generator"
-        }
-        
+
         # Prepare custom parameters for the security_advisory template
+        # We no longer pre-populate front_matter here; rely on LLM + enhancers
         custom_params = {
             "topic": cve_id,  # The CVE ID is used as the topic
             "title": title,
@@ -749,9 +739,9 @@ def enhanced_cve_report(
                 "remediation",
                 cve_id
             ],
-            "front_matter": front_matter_data
+            # "front_matter": front_matter_data # Removed - let enhancers handle this post-generation
         }
-        
+
         # Define the prompt template to use
         prompt_template_name = "security_advisory.j2"
 
